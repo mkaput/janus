@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Language.Janus
 
 main :: IO ()
 main = do

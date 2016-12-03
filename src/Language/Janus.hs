@@ -1,4 +1,4 @@
-module Lib (
+module Language.Janus (
   someFunc
 ) where
 
