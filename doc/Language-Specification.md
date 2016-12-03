@@ -275,8 +275,17 @@ block_item : block
 ## Expressions
 
 ```antlr
-expr : literal_expr | unit_expr | block_expr | op_expr | if_expr | for_expr
-     | while_expr | loop_expr | break_expr | continue_expr | return_expr
+expr : literal_expr
+     | unit_expr
+     | block_expr
+     | op_expr
+     | if_expr
+     | for_expr
+     | while_expr
+     | loop_expr
+     | break_expr
+     | continue_expr
+     | return_expr
 
 literal_expr : literal
 unit_expr    : "()"
