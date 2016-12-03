@@ -238,7 +238,7 @@ program : whitespace? stmt*
 
 ```antlr
 stmt      : decl_stmt | expr_stmt | ";"
-decl_stmt : let_decl ";" | item
+decl_stmt : let_decl ";" | item ";"?
 expr_stmt : expr ";"
 ```
 
