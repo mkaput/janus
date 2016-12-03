@@ -292,7 +292,7 @@ following precedence table:
 | Precedence | Operator          | Associativity | Operation |
 |------------|-------------------|---------------|---|
 | 20         | `(...)`           | n/a           | Grouping |
-| 19         | -                 | -             | - |
+| 19         | `... [ ... ]`     | left-to-right | Indexed member access |
 | 18         | `... ( ... )`     | left-to-right | Function call |
 | 17         | `... ++`          | n/a           | Postfix increment |
 |            | `... --`          | n/a           | Postfix decrement |
