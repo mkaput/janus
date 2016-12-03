@@ -310,15 +310,16 @@ following precedence table:
 |            | `... - ...`       | left-to-right | Substraction |
 | 12         | `... << ...`      | left-to-right | Bitwise left shift |
 |            | `... >> ...`      | left-to-right | Bitwise right shift |
-| 11         | `... < ...`       | left-to-right | Less than |
-|            | `... <= ...`      | left-to-right | Less than or equal |
-|            | `... > ...`       | left-to-right | Greater than or equal |
-|            | `... >= ...`      | left-to-right | Greater than or equal |
-| 10         | `... == ...`      | left-to-right | Equality |
+| 11         | `... & ...`       | left-to-right | Bitwise AND |
+| 10         | `... ^ ...`       | left-to-right | Bitwise XOR |
+| 9          | `... | ...`       | left-to-right | Bitwise OR |
+| 8          | `... == ...`      | left-to-right | Equality |
 |            | `... != ...`      | left-to-right | Inequality |
-| 9          | `... & ...`       | left-to-right | Bitwise AND |
-| 8          | `... ^ ...`       | left-to-right | Bitwise XOR |
-| 7          | `... | ...`       | left-to-right | Bitwise OR |
+|            | `... < ...`       | left-to-right | Less than |
+|            | `... > ...`       | left-to-right | Greater than or equal |
+|            | `... <= ...`      | left-to-right | Less than or equal |
+|            | `... >= ...`      | left-to-right | Greater than or equal |
+| 7          | -                 | -             | - |
 | 6          | `... and ...`     | left-to-right | Logical AND |
 | 5          | `... or ...`      | left-to-right | Logical OR |
 | 4          | -                 | -             | - |
