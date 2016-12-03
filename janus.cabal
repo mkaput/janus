@@ -19,8 +19,16 @@ library
   build-depends:       base >= 4.7 && < 5
   default-language:    Haskell2010
 
-executable janus-exe
-  hs-source-dirs:      app
+executable janus-repl
+  hs-source-dirs:      repl
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base,
+                       janus
+  default-language:    Haskell2010
+
+executable janus-run
+  hs-source-dirs:      runner
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base,
