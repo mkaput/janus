@@ -257,7 +257,7 @@ item : fn_item | block_item
 ### Functions
 
 ```antlr
-fn_item   : "fn" ident "(" fn_params? ")" block_item
+fn_item   : "fn" ident "(" fn_params? ")" block
 fn_params : ident [ "," ident ]*
 ```
 
