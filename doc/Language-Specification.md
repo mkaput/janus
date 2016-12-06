@@ -26,7 +26,7 @@ self-referentially as follows:
 grammar        : rule+
 rule           : nonterminal ':' productionrule
 productionrule : production [ '|' production ]*
-production     : term*
+production     : term+
 term           : element repeats
 element        : LITERAL | IDENTIFIER | '[' productionrule ']'
 repeats        : [ '*' | '+' ] NUMBER? | NUMBER? | '?'
@@ -127,7 +127,7 @@ nonzero_dec : '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 ```antlr
 comment            : block_comment | line_comment
-block_comment      : "/*" block_comment_body* "*/"
+block_comment      : "/*" block_comment_body "*/"
 block_comment_body : [ block_comment | character ]*
 line_comment       : "//" non_eol*
 ```
@@ -200,7 +200,7 @@ num_lit : nonzero_dec [ dec_digit | '_' ]* float_suffix?
               | 'o'   [ oct_digit | '_' ]+
               | 'x'   [ hex_digit | '_' ]+  ]
 
-float_suffix : [ exponent | '.' dec_lit exponent? ]?
+float_suffix : exponent | '.' dec_lit exponent?
 
 exponent : ['E' | 'e' ] [ '-' | '+' ]? dec_lit
 
