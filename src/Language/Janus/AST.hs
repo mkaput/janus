@@ -1,5 +1,7 @@
 module Language.Janus.AST where
 
+type Ident = String
+
 data Val = JUnit
          | JBool Bool
          | JInt Integer
@@ -84,7 +86,7 @@ data Expr = LiteralExpr
           | ReturnExpr Expr
           deriving (Show, Eq)
 
-data LetDecl = LetDecl
+data LetDecl = LetDecl Ident Expr
              deriving (Show, Eq)
 
 data Block = Block {
