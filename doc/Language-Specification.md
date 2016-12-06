@@ -165,7 +165,7 @@ reserved to make space for possible future features.
 ### Literals
 
 ```antlr
-literal : string_lit | char_lit | num_lit | bool_lit
+literal : string_lit | char_lit | num_lit | bool_lit | unit_lit
 ```
 
 #### Character and string literals
@@ -208,6 +208,12 @@ bool_lit : "True" | "False"
 ```
 
 The two values of the boolean type are written `True` and `False`.
+
+#### Unit literal
+
+```antlr
+unit_lit : "()"
+```
 
 ### Symbols
 
@@ -270,7 +276,6 @@ block_item : block
 
 ```antlr
 expr : literal_expr
-     | unit_expr
      | block_expr
      | op_expr
      | if_expr
@@ -282,7 +287,6 @@ expr : literal_expr
      | return_expr
 
 literal_expr : literal
-unit_expr    : "()"
 block_expr   : block
 ```
 
