@@ -3,7 +3,8 @@ module Language.Janus.AST (
   showVal
 ) where
 
-data Val = JBool Bool
+data Val = JUnit
+         | JBool Bool
          | JInt Integer
          | JDouble Double
          | JChar Char
@@ -11,6 +12,7 @@ data Val = JBool Bool
          deriving (Show, Eq, Ord)
 
 showVal :: Val -> String
+showVal JUnit       = "()"
 showVal (JBool x)   = show x
 showVal (JInt x)    = show x
 showVal (JDouble x) = show x

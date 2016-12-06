@@ -9,6 +9,9 @@ main = hspec spec
 
 spec = do
   describe "Val" $ do
+    it "is equatable over units" $
+      JUnit == JUnit
+
     it "is equatable over ints" . property $
       \i1 i2 -> if i1 == i2
         then JInt i1 == JInt i2
@@ -56,6 +59,9 @@ spec = do
       \a b -> (a `compare` b) == (JStr a `compare` JStr b)
 
   describe "showVal" $ do
+    it "shows '()' for units" $
+      showVal JUnit == "()"
+
     it "shows inner value just like 'show' on ints" . property $
       \x -> show x == showVal (JInt x)
 
