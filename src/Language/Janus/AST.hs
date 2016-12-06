@@ -66,13 +66,13 @@ data Expr = LiteralExpr
           | OrExpr Expr Expr
 
           | IfExpr {
-              ifCond :: Expr,
-              ifBranch :: Block,
+              ifCond     :: Expr,
+              ifBranch   :: Block,
               elseBranch :: Block
             }
           | ForExpr {
-              forInit :: Maybe LetDecl,
-              forCond :: Maybe Expr,
+              forInit         :: Maybe LetDecl,
+              forCond         :: Maybe Expr,
               forAfterthought :: Maybe Expr
             }
           | WhileExpr {
@@ -89,11 +89,20 @@ data Expr = LiteralExpr
 data LetDecl = LetDecl Ident Expr
              deriving (Show, Eq)
 
-data Block = Block {
-    blockStmts :: [Stmt],
-    blockExpr :: Maybe Expr
+data FnDecl = FnDecl {
+    fnName   :: Ident,
+    fnParams :: [Ident],
+    fnBody   :: Block
   }
   deriving (Show, Eq)
 
-data Stmt = Stmt
+data Block = Block {
+    blockStmts :: [Stmt],
+    blockExpr  :: Maybe Expr
+  }
   deriving (Show, Eq)
+
+data Stmt = LetDeclStmt LetDecl
+          | FnDeclStmt FnDecl
+          | ExprStmt Expr
+          deriving (Show, Eq)
