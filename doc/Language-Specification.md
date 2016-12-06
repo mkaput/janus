@@ -165,14 +165,8 @@ reserved to make space for possible future features.
 ### Literals
 
 ```antlr
-lit_prefix : ident
-lit_suffix : ident
-literal    : lit_prefix? [ string_lit | char_lit | num_lit | bool_lit ] lit_suffix?
+literal : string_lit | char_lit | num_lit | bool_lit
 ```
-
-The optional `lit_prefix` and `lit_suffix` productions are reserved for use in
-future features. Janus parser can reject usages of prefixes and suffixes in
-inappropriate literals.
 
 #### Character and string literals
 
