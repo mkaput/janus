@@ -67,14 +67,14 @@ data Expr = LiteralExpr
 
           | IfExpr {
               ifCond     :: Expr,
-              ifBranch   :: Block,
-              elseBranch :: Block
+              ifBranch   :: Expr,
+              elseBranch :: Expr
             }
           | WhileExpr {
               whileCond :: Expr,
-              whileBody :: Block
+              whileBody :: Expr
             }
-          | LoopExpr Block
+          | LoopExpr Expr
 
           | BreakExpr
           | ContinueExpr
