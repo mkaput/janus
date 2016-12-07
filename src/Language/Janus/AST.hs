@@ -70,11 +70,6 @@ data Expr = LiteralExpr
               ifBranch   :: Block,
               elseBranch :: Block
             }
-          | ForExpr {
-              forInit         :: Maybe LetDecl,
-              forCond         :: Maybe Expr,
-              forAfterthought :: Maybe Expr
-            }
           | WhileExpr {
               whileCond :: Expr,
               whileBody :: Block
@@ -96,11 +91,7 @@ data FnDecl = FnDecl {
   }
   deriving (Show, Eq)
 
-data Block = Block {
-    blockStmts :: [Stmt],
-    blockExpr  :: Maybe Expr
-  }
-  deriving (Show, Eq)
+type Block = [Stmt]
 
 data Stmt = LetDeclStmt LetDecl
           | FnDeclStmt FnDecl
