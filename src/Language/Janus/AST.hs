@@ -1,6 +1,7 @@
 module Language.Janus.AST where
 
-type Ident = String
+newtype Ident = Ident String
+              deriving (Show, Eq, Ord)
 
 data Val = JUnit
          | JBool Bool
@@ -91,7 +92,8 @@ data FnDecl = FnDecl {
   }
   deriving (Show, Eq)
 
-type Block = [Stmt]
+newtype Block = Block [Stmt]
+              deriving (Show, Eq)
 
 data Stmt = LetDeclStmt LetDecl
           | FnDeclStmt FnDecl
