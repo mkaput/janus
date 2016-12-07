@@ -264,11 +264,11 @@ fn_params : ident [ "," ident ]*
 ### Blocks
 
 A block is a sequence of statements, possibly ending with an expression.
-The return value of the block is the value of the last expression,
-or `()` if not provided.
+The return value of the block is the value of the last expression
+statement, or `()` otherwise.
 
 ```antlr
-block      : "{" stmt* expr? "}"
+block      : "{" stmt* "}"
 block_item : block
 ```
 
