@@ -279,7 +279,6 @@ expr : literal_expr
      | block_expr
      | op_expr
      | if_expr
-     | for_expr
      | while_expr
      | loop_expr
      | break_expr
@@ -351,34 +350,6 @@ provided, it evaluates to `()`, e.g.:
 
 ```rust
 let a = if false { 1234 } // a == ()
-```
-
-### For loops
-
-```antlr
-for_expr : "for" let_decl? ";" expr? ";" expr?
-           block
-```
-
-The `for` loop is a similar construct to *C*'s counterpart.
-
-The `for` has following structure: `for <initializer>; <condition>; <afterthought>`.
-Neither of these parts is required. The `initializer` is a variable binding
-creating local variable which should denote loop iterator. Loop terminates
-if `condition` if false. `afterthought` is always called after successful loop
-iteration. This loop always returns `()`.
-
-The `for` loop is syntactic sugar for following snippet:
-
-```rust
-{
-    /* initializer */
-    loop {
-        /* body */
-        if /* condition */ { break }
-        /* afterthought */
-    }
-}
 ```
 
 ### While loops
