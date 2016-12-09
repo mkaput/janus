@@ -19,7 +19,7 @@ showVal (JDouble x) = show x
 showVal (JChar x)   = show x
 showVal (JStr x)    = show x
 
-data Expr = LiteralExpr
+data Expr = LiteralExpr Val
           | BlockExpr Block
 
           | ParenExpr Expr
