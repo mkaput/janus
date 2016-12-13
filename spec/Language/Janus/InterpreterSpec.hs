@@ -9,7 +9,7 @@ import           Language.Janus.Interpreter
 main = hspec spec
 
 spec = do
-  describe "eval" $ do
+  describe "eval of Val" $ do
     it "correctly evaluates JUnit" $
       eval JUnit `shouldBe` Right JUnit
     it "correctly evaluates JBool" $

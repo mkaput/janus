@@ -18,8 +18,7 @@ library
   exposed-modules:     Language.Janus,
                        Language.Janus.AST,
                        Language.Janus.Interpreter
-  other-modules:       Language.Janus.Interpreter.Evaluable,
-                       Language.Janus.Parser,
+  other-modules:       Language.Janus.Parser,
                        Language.Janus.Parser.Expressions,
                        Language.Janus.Parser.Lexer,
                        Language.Janus.Parser.Statements
