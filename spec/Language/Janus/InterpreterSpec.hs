@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Language.Janus.InterpreterSpec where
 
 import           Test.Hspec
@@ -27,15 +29,13 @@ spec = do
   describe "eval of NotExpr" $ do
     it "!True == False" $ NotExpr (toLiteral True) `shouldEval` toVal False
     it "!False == True" $ NotExpr (toLiteral False) `shouldEval` toVal True
-    it "!1 type errors" $
-      NotExpr (toLiteralI 1) `shouldEvalThrow` TypeError
+    it "!1 type errors" . shouldEvalThrowTypeError $ NotExpr (toLiteralI 1)
 
   describe "eval of BitNotExpr" $ do
     it "~True == False" $ BitNotExpr (toLiteral True) `shouldEval` toVal False
     it "~False == True" $ BitNotExpr (toLiteral False) `shouldEval` toVal True
     it "~5 == -6" $ BitNotExpr (toLiteralI 5) `shouldEval` toValI (-6)
-    it "~5.0 type errors" $
-      BitNotExpr (toLiteralD 5.0) `shouldEvalThrow` TypeError
+    it "~5.0 type errors" . shouldEvalThrowTypeError $ BitNotExpr (toLiteralD 5.0)
 
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
@@ -53,3 +53,14 @@ shouldEvalThrow' st ast err = do
 
 shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
 shouldEvalThrow = shouldEvalThrow' emptyState
+
+shouldEvalThrowTypeError' :: Evaluable a => EvalState -> a -> Expectation
+shouldEvalThrowTypeError' st ast = do
+  result <- runExceptT (evalStateT (eval ast) st)
+  case result of
+    Left OpCallTypeError{..} -> True `shouldBe` True
+    x -> expectationFailure $
+      "program did not throw TypeError, but instead returned:\n" ++ show x
+
+shouldEvalThrowTypeError :: Evaluable a => a -> Expectation
+shouldEvalThrowTypeError = shouldEvalThrowTypeError' emptyState

@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Language.Janus.Interpreter (
   EvalError(..),
 
@@ -14,6 +16,7 @@ import           Control.Monad.Except
 import           Control.Monad.State.Strict
 import           Control.Monad.Trans
 import           Data.Bits                  (complement, xor, (.&.), (.|.))
+import           Data.Typeable              (TypeRep, Typeable, typeOf)
 
 import           Language.Janus.AST
 
@@ -21,13 +24,32 @@ import           Language.Janus.AST
 --
 -- Errors
 --
-data EvalError = TypeError
+data EvalError = OpCallTypeError {
+                  opName :: String,
+                  triedSigs :: [[TypeRep]],
+                  givenSig  :: [TypeRep]
+                }
                | InternalError String
                deriving (Eq, Ord)
 
 instance Show EvalError where
-  show TypeError           = "type mismatch"
-  show (InternalError msg) = "internal error: " ++ msg
+  show OpCallTypeError{opName=opName, triedSigs=ts, givenSig=gs} =
+    "Type mismatch when calling operator " ++ opName
+      ++ "\n  Tried to evaluate: " ++ got
+      ++ "\n  But this operator has following overloads:\n" ++ expected
+    where
+      expected = foldl1 (\a b -> a ++ ",\n" ++ b)
+               . map ((("    " ++ opName ++ ": ") ++) . joinTypes)
+               $ ts
+      got = opName ++ ": (" ++ joinArgTypes gs ++ ") -> ???"
+
+      joinTypes ls = let
+          args = init ls;
+          ret = last ls
+        in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
+      joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
+
+  show (InternalError msg)                  = "Internal error: " ++ msg
 
 instance Exception EvalError
 
@@ -71,18 +93,12 @@ instance Evaluable Expr where
 
   eval (PostfixDecExpr e') = iie "not implemented yet"
 
-  eval (NotExpr e') = do
-    e <- eval e'
-    case e of
-      JBool b -> retv $ not b
-      _       -> typee
+  eval (NotExpr e') = callOp1 "(!)" [wrapOp1 not] e'
 
-  eval (BitNotExpr e') = do
-    e <- eval e'
-    case e of
-      JBool b -> retv $ complement b
-      JInt i  -> retv $ complement i
-      _       -> typee
+  eval (BitNotExpr e') = callOp1 "(~)" [
+      wrapOp1 (complement :: Bool -> Bool),
+      wrapOp1 (complement :: Integer -> Integer)
+    ] e'
 
   eval (PlusExpr e') = iie "not implemented yet"
 
@@ -149,8 +165,26 @@ instance Evaluable Expr where
 iie :: String -> InterpM a
 iie = throwError . InternalError
 
-typee :: InterpM a
-typee = throwError TypeError
-
 retv :: ToVal a => a -> InterpM Val
 retv = return . toVal
+
+wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
+wrapOp1 f = (
+    fmap (toVal . f) . tryFromVal,
+    [typeOf (undefined :: a), typeOf (undefined :: b)]
+  )
+
+callOp1 :: Evaluable a => String -> [(Val -> Maybe Val, [TypeRep])] -> a -> InterpM Val
+callOp1 opName fs a' = do
+  a <- eval a'
+  doCall fs a []
+    where
+      doCall :: [(Val -> Maybe Val, [TypeRep])] -> Val -> [[TypeRep]] -> InterpM Val
+      doCall [] a triedSigs = throwError OpCallTypeError {
+          opName = opName,
+          triedSigs = triedSigs,
+          givenSig = [haskellTypeRep a]
+        }
+      doCall ((f, sig):fs) a triedSigs = case f a of
+        Just v  -> return v
+        Nothing -> doCall fs a (sig:triedSigs)
