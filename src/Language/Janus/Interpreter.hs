@@ -100,7 +100,10 @@ instance Evaluable Expr where
       wrapOp1 (complement :: Integer -> Integer)
     ] e'
 
-  eval (PlusExpr e') = iie "not implemented yet"
+  eval (PlusExpr e') = callOp1 "+x" [
+      wrapOp1 (id :: Integer -> Integer),
+      wrapOp1 (id :: Double -> Double)
+    ] e'
 
   eval (NegExpr e') = iie "not implemented yet"
 

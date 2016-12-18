@@ -26,16 +26,21 @@ spec = do
     it "correctly evaluates to interpreter error" $
       InternalError "foo" `shouldEvalThrow` InternalError "foo"
 
-  describe "eval of NotExpr" $ do
+  describe "eval of !x" $ do
     it "!True == False" $ NotExpr (toLiteral True) `shouldEval` toVal False
     it "!False == True" $ NotExpr (toLiteral False) `shouldEval` toVal True
     it "!1 type errors" . shouldEvalThrowTypeError $ NotExpr (toLiteralI 1)
 
-  describe "eval of BitNotExpr" $ do
+  describe "eval of ~x" $ do
     it "~True == False" $ BitNotExpr (toLiteral True) `shouldEval` toVal False
     it "~False == True" $ BitNotExpr (toLiteral False) `shouldEval` toVal True
     it "~5 == -6" $ BitNotExpr (toLiteralI 5) `shouldEval` toValI (-6)
     it "~5.0 type errors" . shouldEvalThrowTypeError $ BitNotExpr (toLiteralD 5.0)
+
+  describe "eval of +x" $ do
+    it "+1 == 1" $ PlusExpr (toLiteralI 1) `shouldEval` toValI 1
+    it "+1.0 == 1.0" $ PlusExpr (toLiteralD 1.0) `shouldEval` toValD 1.0
+    it "+True type errors" . shouldEvalThrowTypeError $ PlusExpr (toLiteral True)
 
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
