@@ -34,9 +34,9 @@ data EvalError = OpCallTypeError {
 
 instance Show EvalError where
   show OpCallTypeError{opName=opName, triedSigs=ts, givenSig=gs} =
-    "Type mismatch when calling operator " ++ opName
+    "Type mismatch when calling " ++ opName
       ++ "\n  Tried to evaluate: " ++ got
-      ++ "\n  But this operator has following overloads:\n" ++ expected
+      ++ "\n  But it has following overloads:\n" ++ expected
     where
       expected = foldl1 (\a b -> a ++ ",\n" ++ b)
                . map ((("    " ++ opName ++ ": ") ++) . joinTypes)
@@ -93,9 +93,9 @@ instance Evaluable Expr where
 
   eval (PostfixDecExpr e') = iie "not implemented yet"
 
-  eval (NotExpr e') = callOp1 "(!)" [wrapOp1 not] e'
+  eval (NotExpr e') = callOp1 "!x" [wrapOp1 not] e'
 
-  eval (BitNotExpr e') = callOp1 "(~)" [
+  eval (BitNotExpr e') = callOp1 "~x" [
       wrapOp1 (complement :: Bool -> Bool),
       wrapOp1 (complement :: Integer -> Integer)
     ] e'
