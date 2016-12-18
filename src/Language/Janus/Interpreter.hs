@@ -74,14 +74,14 @@ instance Evaluable Expr where
   eval (NotExpr e') = do
     e <- eval e'
     case e of
-      JBool b -> return $ JBool (not b)
+      JBool b -> retv $ not b
       _       -> typee
 
   eval (BitNotExpr e') = do
     e <- eval e'
     case e of
-      JBool b -> return $ JBool (complement b)
-      JInt i  -> return $ JInt (complement i)
+      JBool b -> retv $ complement b
+      JInt i  -> retv $ complement i
       _       -> typee
 
   eval (PlusExpr e') = iie "not implemented yet"
@@ -151,3 +151,6 @@ iie = throwError . InternalError
 
 typee :: InterpM a
 typee = throwError TypeError
+
+retv :: ToVal a => a -> InterpM Val
+retv = return . toVal
