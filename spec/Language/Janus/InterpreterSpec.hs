@@ -60,7 +60,7 @@ spec = do
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
 shouldEval' st ast expected = do
-  result <- runExceptT (evalStateT (eval ast) st)
+  result <- run' st ast
   result `shouldBe` Right expected
 
 shouldEval :: Evaluable a => a -> Val -> Expectation
@@ -68,7 +68,7 @@ shouldEval = shouldEval' emptyState
 
 shouldEvalThrow' :: Evaluable a => EvalState -> a -> EvalError -> Expectation
 shouldEvalThrow' st ast err = do
-  result <- runExceptT (evalStateT (eval ast) st)
+  result <- run' st ast
   result `shouldBe` Left err
 
 shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
@@ -76,7 +76,7 @@ shouldEvalThrow = shouldEvalThrow' emptyState
 
 shouldEvalThrowTypeError' :: Evaluable a => EvalState -> a -> Expectation
 shouldEvalThrowTypeError' st ast = do
-  result <- runExceptT (evalStateT (eval ast) st)
+  result <- run' st ast
   case result of
     Left OpCallTypeError{..} -> True `shouldBe` True
     x -> expectationFailure $

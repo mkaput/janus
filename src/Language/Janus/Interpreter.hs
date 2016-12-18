@@ -6,6 +6,8 @@ module Language.Janus.Interpreter (
   EvalState(..),
   emptyState,
   InterpM,
+  run,
+  run',
 
   Evaluable,
   eval
@@ -65,6 +67,12 @@ emptyState :: EvalState
 emptyState = EvalState
 
 type InterpM = StateT EvalState (ExceptT EvalError IO)
+
+run' :: Evaluable a => EvalState -> a -> IO (Either EvalError Val)
+run' st ast = runExceptT (evalStateT (eval ast) st)
+
+run :: Evaluable a => a -> IO (Either EvalError Val)
+run = run' emptyState
 
 
 --
