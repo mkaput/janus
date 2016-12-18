@@ -13,6 +13,7 @@ import           Control.Exception          (Exception)
 import           Control.Monad.Except
 import           Control.Monad.State.Strict
 import           Control.Monad.Trans
+import           Data.Bits                  (complement, xor, (.&.), (.|.))
 
 import           Language.Janus.AST
 
@@ -76,7 +77,12 @@ instance Evaluable Expr where
       JBool b -> return $ JBool (not b)
       _       -> typee
 
-  eval (BitNotExpr e') = iie "not implemented yet"
+  eval (BitNotExpr e') = do
+    e <- eval e'
+    case e of
+      JBool b -> return $ JBool (complement b)
+      JInt i  -> return $ JInt (complement i)
+      _       -> typee
 
   eval (PlusExpr e') = iie "not implemented yet"
 

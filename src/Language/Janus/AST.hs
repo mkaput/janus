@@ -55,6 +55,24 @@ instance ToVal String where
 toLiteral :: ToVal a => a -> Expr
 toLiteral = LiteralExpr . toVal
 
+toValI :: Integral a => a -> Val
+toValI = toVal . toInteger
+
+toValF :: Float -> Val
+toValF = toVal . float2Double
+
+toValD :: Double -> Val
+toValD = toVal
+
+toLiteralI :: Integral a => a -> Expr
+toLiteralI = LiteralExpr . toValI
+
+toLiteralF :: Float -> Expr
+toLiteralF = LiteralExpr . toValF
+
+toLiteralD :: Double -> Expr
+toLiteralD = LiteralExpr . toValD
+
 
 data Expr = LiteralExpr Val
           | BlockExpr Block

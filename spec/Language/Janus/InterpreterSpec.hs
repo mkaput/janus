@@ -28,7 +28,14 @@ spec = do
     it "!True == False" $ NotExpr (toLiteral True) `shouldEval` toVal False
     it "!False == True" $ NotExpr (toLiteral False) `shouldEval` toVal True
     it "!1 type errors" $
-      NotExpr (toLiteral (1 :: Int)) `shouldEvalThrow` TypeError
+      NotExpr (toLiteralI 1) `shouldEvalThrow` TypeError
+
+  describe "eval of BitNotExpr" $ do
+    it "~True == False" $ BitNotExpr (toLiteral True) `shouldEval` toVal False
+    it "~False == True" $ BitNotExpr (toLiteral False) `shouldEval` toVal True
+    it "~5 == -6" $ BitNotExpr (toLiteralI 5) `shouldEval` toValI (-6)
+    it "~5.0 type errors" $
+      BitNotExpr (toLiteralD 5.0) `shouldEvalThrow` TypeError
 
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
