@@ -15,7 +15,8 @@ import           Control.Exception          (Exception)
 import           Control.Monad.Except
 import           Control.Monad.State.Strict
 import           Control.Monad.Trans
-import           Data.Bits                  (complement, xor, (.&.), (.|.))
+import           Data.Bits                  (complement, rotateL, rotateR, xor,
+                                             (.&.), (.|.))
 import           Data.Typeable              (TypeRep, Typeable, typeOf)
 
 import           Language.Janus.AST
@@ -114,43 +115,120 @@ instance Evaluable Expr where
 
   eval (PrefixDecExpr e') = iie "not implemented yet"
 
-  eval (ExpExpr a' b') = iie "not implemented yet"
+  eval (ExpExpr a' b') = callOp2 "x ** n" [
+      wrapOp2 ((^) :: Integer -> Integer -> Integer),
+      wrapOp2 ((**) :: Double -> Double -> Double)
+    ] a' b'
 
-  eval (MulExpr a' b') = iie "not implemented yet"
+  eval (MulExpr a' b') = callOp2 "a * b" [
+      wrapOp2 ((*) :: Integer -> Integer -> Integer),
+      wrapOp2 ((*) :: Double -> Double -> Double)
+    ] a' b'
 
-  eval (DivExpr a' b') = iie "not implemented yet"
+  eval (DivExpr a' b') = callOp2 "a / b" [
+      wrapOp2 (div :: Integer -> Integer -> Integer),
+      wrapOp2 ((/) :: Double -> Double -> Double)
+    ] a' b'
 
-  eval (RemExpr a' b') = iie "not implemented yet"
+  eval (RemExpr a' b') = callOp2 "a mod b" [
+      wrapOp2 (mod :: Integer -> Integer -> Integer)
+    ] a' b'
 
-  eval (AddExpr a' b') = iie "not implemented yet"
+  eval (AddExpr a' b') = callOp2 "a + b" [
+      wrapOp2 ((+) :: Integer -> Integer -> Integer),
+      wrapOp2 ((+) :: Double -> Double -> Double),
+      wrapOp2 ((++) :: String -> String -> String)
+    ] a' b'
 
-  eval (SubExpr a' b') = iie "not implemented yet"
+  eval (SubExpr a' b') = callOp2 "a - b" [
+      wrapOp2 ((-) :: Integer -> Integer -> Integer),
+      wrapOp2 ((-) :: Double -> Double -> Double)
+    ] a' b'
 
-  eval (LshExpr a' b') = iie "not implemented yet"
+  eval (LshExpr a' b') = callOp2 "a << b" [
+      wrapOp2 (rotateL :: Integer -> Int -> Integer)
+    ] a' b'
 
-  eval (RshExpr a' b') = iie "not implemented yet"
+  eval (RshExpr a' b') = callOp2 "a >> b" [
+      wrapOp2 (rotateR :: Integer -> Int -> Integer)
+    ] a' b'
 
-  eval (BitAndExpr a' b') = iie "not implemented yet"
+  eval (BitAndExpr a' b') = callOp2 "a & b" [
+      wrapOp2 ((.&.) :: Bool -> Bool -> Bool),
+      wrapOp2 ((.&.) :: Integer -> Integer -> Integer)
+    ] a' b'
 
-  eval (BitXorExpr a' b') = iie "not implemented yet"
+  eval (BitXorExpr a' b') = callOp2 "a ^ b" [
+      wrapOp2 (xor :: Bool -> Bool -> Bool),
+      wrapOp2 (xor :: Integer -> Integer -> Integer)
+    ] a' b'
 
-  eval (BitOrExpr a' b') = iie "not implemented yet"
+  eval (BitOrExpr a' b') = callOp2 "a | b" [
+      wrapOp2 ((.|.) :: Bool -> Bool -> Bool),
+      wrapOp2 ((.|.) :: Integer -> Integer -> Integer)
+    ] a' b'
 
-  eval (EqExpr a' b') = iie "not implemented yet"
+  eval (EqExpr a' b') = callOp2 "a == b" [
+      wrapOp2 ((==) :: () -> () -> Bool),
+      wrapOp2 ((==) :: Bool -> Bool -> Bool),
+      wrapOp2 ((==) :: Integer -> Integer -> Bool),
+      wrapOp2 ((==) :: Double -> Double -> Bool),
+      wrapOp2 ((==) :: Char -> Char -> Bool),
+      wrapOp2 ((==) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (NeqExpr a' b') = iie "not implemented yet"
+  eval (NeqExpr a' b') = callOp2 "a /= b" [
+      wrapOp2 ((/=) :: () -> () -> Bool),
+      wrapOp2 ((/=) :: Bool -> Bool -> Bool),
+      wrapOp2 ((/=) :: Integer -> Integer -> Bool),
+      wrapOp2 ((/=) :: Double -> Double -> Bool),
+      wrapOp2 ((/=) :: Char -> Char -> Bool),
+      wrapOp2 ((/=) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (LtExpr a' b') = iie "not implemented yet"
+  eval (LtExpr a' b') = callOp2 "a < b" [
+      wrapOp2 ((<) :: () -> () -> Bool),
+      wrapOp2 ((<) :: Bool -> Bool -> Bool),
+      wrapOp2 ((<) :: Integer -> Integer -> Bool),
+      wrapOp2 ((<) :: Double -> Double -> Bool),
+      wrapOp2 ((<) :: Char -> Char -> Bool),
+      wrapOp2 ((<) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (GtExpr a' b') = iie "not implemented yet"
+  eval (GtExpr a' b') = callOp2 "a > b" [
+      wrapOp2 ((>) :: () -> () -> Bool),
+      wrapOp2 ((>) :: Bool -> Bool -> Bool),
+      wrapOp2 ((>) :: Integer -> Integer -> Bool),
+      wrapOp2 ((>) :: Double -> Double -> Bool),
+      wrapOp2 ((>) :: Char -> Char -> Bool),
+      wrapOp2 ((>) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (LtEqExpr a' b') = iie "not implemented yet"
+  eval (LtEqExpr a' b') = callOp2 "a <= b" [
+      wrapOp2 ((<=) :: () -> () -> Bool),
+      wrapOp2 ((<=) :: Bool -> Bool -> Bool),
+      wrapOp2 ((<=) :: Integer -> Integer -> Bool),
+      wrapOp2 ((<=) :: Double -> Double -> Bool),
+      wrapOp2 ((<=) :: Char -> Char -> Bool),
+      wrapOp2 ((<=) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (GtEqExpr a' b') = iie "not implemented yet"
+  eval (GtEqExpr a' b') = callOp2 "a >= b" [
+      wrapOp2 ((>=) :: () -> () -> Bool),
+      wrapOp2 ((>=) :: Bool -> Bool -> Bool),
+      wrapOp2 ((>=) :: Integer -> Integer -> Bool),
+      wrapOp2 ((>=) :: Double -> Double -> Bool),
+      wrapOp2 ((>=) :: Char -> Char -> Bool),
+      wrapOp2 ((>=) :: String -> String -> Bool)
+    ] a' b'
 
-  eval (AndExpr a' b') = iie "not implemented yet"
+  eval (AndExpr a' b') = callOp2 "a and b" [
+      wrapOp2 ((&&) :: Bool -> Bool -> Bool)
+    ] a' b'
 
-  eval (OrExpr a' b') = iie "not implemented yet"
+  eval (OrExpr a' b') = callOp2 "a or b" [
+      wrapOp2 ((||) :: Bool -> Bool -> Bool)
+    ] a' b'
 
   eval IfExpr{ifCond=cond', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
 
@@ -194,3 +272,30 @@ callOp1 opName fs a' = do
       doCall ((f, sig):fs) a triedSigs = case f a of
         Just v  -> return v
         Nothing -> doCall fs a (sig:triedSigs)
+
+wrapOp2 :: forall a b c. (FromVal a, FromVal b, ToVal c)
+  => (a -> b -> c) -> (Val -> Val -> Maybe Val, [TypeRep])
+wrapOp2 f = (
+    \a' b' -> do
+      a <- tryFromVal a'
+      b <- tryFromVal b'
+      return . toVal $ f a b,
+    [typeOf (undefined :: a), typeOf (undefined :: b), typeOf (undefined :: c)]
+  )
+
+callOp2 :: (Evaluable a, Evaluable b)
+  => String -> [(Val -> Val -> Maybe Val, [TypeRep])] -> a -> b -> InterpM Val
+callOp2 opName fs a' b' = do
+  a <- eval a'
+  b <- eval b'
+  doCall fs a b []
+    where
+      doCall :: [(Val -> Val -> Maybe Val, [TypeRep])] -> Val -> Val -> [[TypeRep]] -> InterpM Val
+      doCall [] a b triedSigs = throwError OpCallTypeError {
+          opName = opName,
+          triedSigs = triedSigs,
+          givenSig = [haskellTypeRep a, haskellTypeRep b]
+        }
+      doCall ((f, sig):fs) a b triedSigs = case f a b of
+        Just v  -> return v
+        Nothing -> doCall fs a b (sig:triedSigs)
