@@ -6,7 +6,7 @@ module Language.Janus.AST where
 
 import           Data.Data     (Data, toConstr)
 import           Data.Maybe    (fromMaybe)
-import           Data.Typeable (Typeable, TypeRep, typeOf)
+import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           GHC.Float     (double2Float, float2Double)
 
 
@@ -37,12 +37,12 @@ showVal (JChar x)   = show x
 showVal (JStr x)    = show x
 
 haskellTypeRep :: Val -> TypeRep
-haskellTypeRep JUnit = typeOf ()
-haskellTypeRep (JBool a) = typeOf a
-haskellTypeRep (JInt a) = typeOf a
+haskellTypeRep JUnit       = typeOf ()
+haskellTypeRep (JBool a)   = typeOf a
+haskellTypeRep (JInt a)    = typeOf a
 haskellTypeRep (JDouble a) = typeOf a
-haskellTypeRep (JChar a) = typeOf a
-haskellTypeRep (JStr a) = typeOf a
+haskellTypeRep (JChar a)   = typeOf a
+haskellTypeRep (JStr a)    = typeOf a
 
 
 --

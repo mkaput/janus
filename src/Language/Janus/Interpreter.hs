@@ -25,7 +25,7 @@ import           Language.Janus.AST
 -- Errors
 --
 data EvalError = OpCallTypeError {
-                  opName :: String,
+                  opName    :: String,
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
                 }
@@ -49,7 +49,7 @@ instance Show EvalError where
         in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
       joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
 
-  show (InternalError msg)                  = "Internal error: " ++ msg
+  show (InternalError msg) = "Internal error: " ++ msg
 
 instance Exception EvalError
 
