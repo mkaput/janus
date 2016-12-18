@@ -11,25 +11,38 @@ import           Language.Janus.Interpreter
 
 main = hspec spec
 
-doTest :: Evaluable a => EvalState -> Val -> a -> Expectation
-doTest st expected actual = do
-  result <- runExceptT (evalStateT (eval actual) st)
-  result `shouldBe` Right expected
-
-doTestE :: Evaluable a => Val -> a -> Expectation
-doTestE = doTest emptyState
-
 spec = do
   describe "eval of Val" $ do
     it "correctly evaluates JUnit" $
-      doTestE JUnit JUnit
+      JUnit `shouldEval` JUnit
     it "correctly evaluates JBool" $
-      doTestE (JBool True) (JBool True)
+      JBool True `shouldEval` JBool True
     it "correctly evaluates JInt" $
-      doTestE (JInt 2) (JInt 2)
+      JInt 2 `shouldEval` JInt 2
     it "correctly evaluates JDouble" $
-      doTestE (JDouble 3.0) (JDouble 3.0)
+      JDouble 3.0 `shouldEval` JDouble 3.0
     it "correctly evaluates JChar" $
-      doTestE (JChar 'c') (JChar 'c')
+      JChar 'c' `shouldEval` JChar 'c'
     it "correctly evaluates JStr" $
-      doTestE (JStr "aaa") (JStr "aaa")
+      JStr "aaa" `shouldEval` JStr "aaa"
+
+  describe "eval of EvalError" .
+    it "correctly evaluates" $
+      InternalError "foo" `shouldEvalThrow` InternalError "foo"
+
+
+shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
+shouldEval' st ast expected = do
+  result <- runExceptT (evalStateT (eval ast) st)
+  result `shouldBe` Right expected
+
+shouldEval :: Evaluable a => a -> Val -> Expectation
+shouldEval = shouldEval' emptyState
+
+shouldEvalThrow' :: Evaluable a => EvalState -> a -> EvalError -> Expectation
+shouldEvalThrow' st ast err = do
+  result <- runExceptT (evalStateT (eval ast) st)
+  result `shouldBe` Left err
+
+shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
+shouldEvalThrow = shouldEvalThrow' emptyState

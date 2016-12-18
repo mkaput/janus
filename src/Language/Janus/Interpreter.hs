@@ -1,5 +1,5 @@
 module Language.Janus.Interpreter (
-  EvalError,
+  EvalError(..),
 
   EvalState(..),
   emptyState,
