@@ -42,6 +42,11 @@ spec = do
     it "+1.0 == 1.0" $ PlusExpr (toLiteralD 1.0) `shouldEval` toValD 1.0
     it "+True type errors" . shouldEvalThrowTypeError $ PlusExpr (toLiteral True)
 
+  describe "eval of -x" $ do
+    it "-(1) == -1" $ NegExpr (toLiteralI 1) `shouldEval` toValI (-1)
+    it "-(1.0) == -1.0" $ NegExpr (toLiteralD 1.0) `shouldEval` toValD (-1.0)
+    it "-True type errors" . shouldEvalThrowTypeError $ NegExpr (toLiteral True)
+
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
 shouldEval' st ast expected = do

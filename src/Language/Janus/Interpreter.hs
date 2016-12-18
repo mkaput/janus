@@ -105,7 +105,10 @@ instance Evaluable Expr where
       wrapOp1 (id :: Double -> Double)
     ] e'
 
-  eval (NegExpr e') = iie "not implemented yet"
+  eval (NegExpr e') = callOp1 "-x" [
+      wrapOp1 (negate :: Integer -> Integer),
+      wrapOp1 (negate :: Double -> Double)
+    ] e'
 
   eval (PrefixIncExpr e') = iie "not implemented yet"
 
