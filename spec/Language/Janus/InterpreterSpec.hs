@@ -3,22 +3,33 @@ module Language.Janus.InterpreterSpec where
 import           Test.Hspec
 import           Test.QuickCheck
 
+import           Control.Monad.Except
+import           Control.Monad.State.Strict
+
 import           Language.Janus.AST
 import           Language.Janus.Interpreter
 
 main = hspec spec
 
+doTest :: Evaluable a => EvalState -> Val -> a -> Expectation
+doTest st expected actual = do
+  result <- runExceptT (evalStateT (eval actual) st)
+  result `shouldBe` Right expected
+
+doTestE :: Evaluable a => Val -> a -> Expectation
+doTestE = doTest emptyState
+
 spec = do
   describe "eval of Val" $ do
     it "correctly evaluates JUnit" $
-      eval JUnit `shouldBe` Right JUnit
+      doTestE JUnit JUnit
     it "correctly evaluates JBool" $
-      (eval . JBool $ True) `shouldBe` (Right . JBool $ True)
+      doTestE (JBool True) (JBool True)
     it "correctly evaluates JInt" $
-      (eval . JInt $ 2) `shouldBe` (Right . JInt $ 2)
+      doTestE (JInt 2) (JInt 2)
     it "correctly evaluates JDouble" $
-      (eval . JDouble $ 3.0) `shouldBe` (Right . JDouble $ 3.0)
+      doTestE (JDouble 3.0) (JDouble 3.0)
     it "correctly evaluates JChar" $
-      (eval . JChar $ 'c') `shouldBe` (Right . JChar $ 'c')
+      doTestE (JChar 'c') (JChar 'c')
     it "correctly evaluates JStr" $
-      (eval . JStr $ "aaa") `shouldBe` (Right . JStr $ "aaa")
+      doTestE (JStr "aaa") (JStr "aaa")
