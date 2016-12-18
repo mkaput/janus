@@ -1,7 +1,13 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Language.Janus.AST where
+
+import           GHC.Float (float2Double)
+
 
 newtype Ident = Ident String
               deriving (Show, Eq, Ord)
+
 
 data Val = JUnit
          | JBool Bool
@@ -18,6 +24,37 @@ showVal (JInt x)    = show x
 showVal (JDouble x) = show x
 showVal (JChar x)   = show x
 showVal (JStr x)    = show x
+
+class ToVal a where
+  toVal :: a -> Val
+
+instance ToVal () where
+  toVal _ = JUnit
+
+instance ToVal Bool where
+  toVal = JBool
+
+instance ToVal Integer where
+  toVal = JInt
+
+instance ToVal Int where
+  toVal = toVal . toInteger
+
+instance ToVal Double where
+  toVal = JDouble
+
+instance ToVal Float where
+  toVal = JDouble . float2Double
+
+instance ToVal Char where
+  toVal = JChar
+
+instance ToVal String where
+  toVal = JStr
+
+toLiteral :: ToVal a => a -> Expr
+toLiteral = LiteralExpr . toVal
+
 
 data Expr = LiteralExpr Val
           | BlockExpr Block
@@ -82,8 +119,10 @@ data Expr = LiteralExpr Val
           | ReturnExpr Expr
           deriving (Show, Eq)
 
+
 data LetDecl = LetDecl Ident Expr
              deriving (Show, Eq)
+
 
 data FnDecl = FnDecl {
     fnName   :: Ident,
@@ -92,8 +131,10 @@ data FnDecl = FnDecl {
   }
   deriving (Show, Eq)
 
+
 newtype Block = Block [Stmt]
               deriving (Show, Eq)
+
 
 data Stmt = LetDeclStmt LetDecl
           | FnDeclStmt FnDecl

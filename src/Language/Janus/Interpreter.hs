@@ -70,7 +70,11 @@ instance Evaluable Expr where
 
   eval (PostfixDecExpr e') = iie "not implemented yet"
 
-  eval (NotExpr e') = iie "not implemented yet"
+  eval (NotExpr e') = do
+    e <- eval e'
+    case e of
+      JBool b -> return $ JBool (not b)
+      _       -> typee
 
   eval (BitNotExpr e') = iie "not implemented yet"
 
@@ -138,3 +142,6 @@ instance Evaluable Expr where
 --
 iie :: String -> InterpM a
 iie = throwError . InternalError
+
+typee :: InterpM a
+typee = throwError TypeError
