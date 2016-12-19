@@ -145,8 +145,13 @@ instance Evaluable Expr where
   eval (AddExpr a' b') = callOp2 "a + b" [
       wrapOp2 ((+) :: Integer -> Integer -> Integer),
       wrapOp2 ((+) :: Double -> Double -> Double),
-      wrapOp2 ((++) :: String -> String -> String)
+      wrapOp2 ((++) :: String -> String -> String),
+      wrapOp2 ((:) :: Char -> String -> String),
+      wrapOp2 stringPlusChar
     ] a' b'
+    where
+      stringPlusChar :: String -> Char -> String
+      stringPlusChar str ch = str ++ [ch]
 
   eval (SubExpr a' b') = callOp2 "a - b" [
       wrapOp2 ((-) :: Integer -> Integer -> Integer),

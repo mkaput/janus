@@ -57,6 +57,12 @@ spec = do
     it "2.0 * 5.0 == 10.0" $ MulExpr (toLiteralD 2.0) (toLiteralD 5.0) `shouldEval` toValD 10.0
     it "2 * 5.0 type errors" . shouldEvalThrowTypeError $ MulExpr (toLiteralI 2) (toLiteralD 5.0)
 
+  describe "eval of a + b" $ do
+    it "'a' + 'a' type errors" . shouldEvalThrowTypeError $ AddExpr (toLiteral 'a') (toLiteral 'a')
+    it "'a' + \"a\" == \"aa\"" $ AddExpr (toLiteral 'a') (toLiteral "a") `shouldEval` toVal "aa"
+    it "\"a\" + 'a' == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral 'a') `shouldEval` toVal "aa"
+    it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
+
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
 shouldEval' st ast expected = do
