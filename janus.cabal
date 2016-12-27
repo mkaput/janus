@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Language.Janus,
                        Language.Janus.AST,
-                       Language.Janus.Interpreter
+                       Language.Janus.Interp
   other-modules:       Language.Janus.Parser,
                        Language.Janus.Parser.Expressions,
                        Language.Janus.Parser.Lexer,
