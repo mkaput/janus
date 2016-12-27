@@ -237,7 +237,7 @@ program : whitespace? stmt*
 ## Statements
 
 ```antlr
-stmt      : decl_stmt | expr_stmt | ";"
+stmt      : decl_stmt | subst_stmt | expr_stmt | ";"
 decl_stmt : let_decl ";" | item ";"?
 expr_stmt : expr ";"
 ```
@@ -246,6 +246,17 @@ expr_stmt : expr ";"
 
 ```antlr
 let_decl : "let" ident "=" expr
+```
+
+Variable binding introduces new subscope with new variable. This prevents
+leaking variables before their declaration and helps programmer prevent
+unexpected variable value changes (though the latter can be mitigated with
+[Substitution statements](#substitution-statements)).
+
+### Substitution statements
+
+```antlr
+subst_stmt : lvalue ":=" expr ";"
 ```
 
 ## Items
@@ -272,6 +283,16 @@ block      : "{" stmt* "}"
 block_item : block
 ```
 
+## Lvalues
+
+Lvalue is a reference to something in memory (either variable or item).
+
+```antlr
+lvalue   : index_lv | path
+index_lv : expr "[" expr "]"
+path     : ident
+```
+
 ## Expressions
 
 ```antlr
@@ -284,9 +305,11 @@ expr : literal_expr
      | break_expr
      | continue_expr
      | return_expr
+     | lvalue_expr
 
 literal_expr : literal
 block_expr   : block
+lvalue_expr  : lvalue
 ```
 
 ### Operators
@@ -298,7 +321,7 @@ following precedence table:
 | Precedence | Operator          | Associativity | Operation |
 |------------|-------------------|---------------|---|
 | 20         | `(...)`           | n/a           | Grouping |
-| 19         | `... [ ... ]`     | left-to-right | Indexed member access |
+| 19         | -                 | -             | - |
 | 18         | `... ( ... )`     | left-to-right | Function call |
 | 17         | `... ++`          | n/a           | Postfix increment |
 |            | `... --`          | n/a           | Postfix decrement |
