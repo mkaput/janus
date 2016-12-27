@@ -3,7 +3,7 @@ module Language.Janus (
 ) where
 
 import           Language.Janus.AST
-import           Language.Janus.Interpreter
+import           Language.Janus.Interp
 import           Language.Janus.Parser
 
 someFunc :: IO ()

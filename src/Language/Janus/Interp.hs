@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module Language.Janus.Interpreter (
+module Language.Janus.Interp (
   EvalError(..),
 
   EvalState(..),

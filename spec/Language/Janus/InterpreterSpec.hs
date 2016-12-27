@@ -9,7 +9,7 @@ import           Control.Monad.Except
 import           Control.Monad.State.Strict
 
 import           Language.Janus.AST
-import           Language.Janus.Interpreter
+import           Language.Janus.Interp
 
 main = hspec spec
 
