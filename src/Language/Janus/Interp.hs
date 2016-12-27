@@ -14,60 +14,16 @@ module Language.Janus.Interp (
   eval
 ) where
 
-import           Control.Exception          (Exception)
-import           Control.Monad.Except
-import           Control.Monad.State.Strict
-import           Control.Monad.Trans
-import           Data.Bits                  (complement, rotateL, rotateR, xor,
-                                             (.&.), (.|.))
-import           Data.Typeable              (TypeRep, Typeable, typeOf)
+import           Control.Monad.Except        (runExceptT, throwError)
+import           Control.Monad.State.Strict  (evalStateT)
+import           Data.Bits                   (complement, rotateL, rotateR, xor,
+                                              (.&.), (.|.))
+import           Data.Typeable               (TypeRep, Typeable, typeOf)
 
 import           Language.Janus.AST
+import           Language.Janus.Interp.Error
+import           Language.Janus.Interp.Monad
 
-
---
--- Errors
---
-data EvalError = OpCallTypeError {
-                  opName    :: String,
-                  triedSigs :: [[TypeRep]],
-                  givenSig  :: [TypeRep]
-                }
-               | InternalError String
-               deriving (Eq, Ord)
-
-instance Show EvalError where
-  show OpCallTypeError{opName=opName, triedSigs=ts, givenSig=gs} =
-    "Type mismatch when calling " ++ opName
-      ++ "\n  Tried to evaluate: " ++ got
-      ++ "\n  But it has following overloads:\n" ++ expected
-    where
-      expected = foldl1 (\a b -> a ++ ",\n" ++ b)
-               . map ((("    " ++ opName ++ ": ") ++) . joinTypes)
-               $ ts
-      got = opName ++ ": (" ++ joinArgTypes gs ++ ") -> ???"
-
-      joinTypes ls = let
-          args = init ls;
-          ret = last ls
-        in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
-      joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
-
-  show (InternalError msg) = "Internal error: " ++ msg
-
-instance Exception EvalError
-
-
---
--- Interpreter Monad
---
-data EvalState = EvalState
-               deriving (Eq, Show)
-
-emptyState :: EvalState
-emptyState = EvalState
-
-type InterpM = StateT EvalState (ExceptT EvalError IO)
 
 run' :: Evaluable a => EvalState -> a -> IO (Either EvalError Val)
 run' st ast = runExceptT (evalStateT (eval ast) st)
