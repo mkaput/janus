@@ -21,7 +21,9 @@ library
   other-modules:       Language.Janus.Parser,
                        Language.Janus.Parser.Expressions,
                        Language.Janus.Parser.Lexer,
-                       Language.Janus.Parser.Statements
+                       Language.Janus.Parser.Statements,
+                       Language.Janus.Interp.Error,
+                       Language.Janus.Interp.Monad
   build-depends:       base >= 4.7 && < 5,
                        parsec == 3.1.*,
                        mtl == 2.2.*
