@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.Interpreter (
   EvalError(..),
@@ -246,9 +247,9 @@ instance Evaluable Expr where
       wrapOp2 ((||) :: Bool -> Bool -> Bool)
     ] a' b'
 
-  eval IfExpr{ifCond=cond', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
+  eval IfExpr{cond=cond', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
 
-  eval WhileExpr{whileCond=cond', whileBody=body'} = iie "not implemented yet"
+  eval WhileExpr{cond=cond', body=body'} = iie "not implemented yet"
 
   eval (LoopExpr e') = iie "not implemented yet"
 

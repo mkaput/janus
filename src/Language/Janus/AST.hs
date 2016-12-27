@@ -1,6 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.AST where
 
@@ -201,13 +202,13 @@ data Expr = LiteralExpr Val
           | OrExpr Expr Expr
 
           | IfExpr {
-              ifCond     :: Expr,
+              cond       :: Expr,
               ifBranch   :: Expr,
               elseBranch :: Expr
             }
           | WhileExpr {
-              whileCond :: Expr,
-              whileBody :: Expr
+              cond :: Expr,
+              body :: Expr
             }
           | LoopExpr Expr
 
@@ -224,9 +225,9 @@ data LetDecl = LetDecl Ident Expr
 
 
 data FnDecl = FnDecl {
-    fnName   :: Ident,
-    fnParams :: [Ident],
-    fnBody   :: Block
+    name   :: Ident,
+    params :: [Ident],
+    body   :: Block
   }
   deriving (Show, Eq)
 
