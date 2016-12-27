@@ -1,15 +1,32 @@
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Language.Janus.AST where
 
+import           Data.Data     (Data, toConstr)
+import           Data.Maybe    (fromMaybe)
+import           Data.Typeable (TypeRep, Typeable, typeOf)
+import           GHC.Float     (double2Float, float2Double)
+
+
+--
+-- Tokens
+--
 newtype Ident = Ident String
               deriving (Show, Eq, Ord)
 
+
+--
+-- Val
+--
 data Val = JUnit
          | JBool Bool
          | JInt Integer
          | JDouble Double
          | JChar Char
          | JStr String
-         deriving (Show, Eq, Ord)
+         deriving (Show, Eq, Ord, Data, Typeable)
 
 showVal :: Val -> String
 showVal JUnit       = "()"
@@ -19,7 +36,117 @@ showVal (JDouble x) = show x
 showVal (JChar x)   = show x
 showVal (JStr x)    = show x
 
-data Expr = LiteralExpr
+haskellTypeRep :: Val -> TypeRep
+haskellTypeRep JUnit       = typeOf ()
+haskellTypeRep (JBool a)   = typeOf a
+haskellTypeRep (JInt a)    = typeOf a
+haskellTypeRep (JDouble a) = typeOf a
+haskellTypeRep (JChar a)   = typeOf a
+haskellTypeRep (JStr a)    = typeOf a
+
+
+--
+-- ToVal class
+--
+class Typeable a => ToVal a where
+  toVal :: a -> Val
+
+instance ToVal () where
+  toVal _ = JUnit
+
+instance ToVal Bool where
+  toVal = JBool
+
+instance ToVal Integer where
+  toVal = JInt
+
+instance ToVal Int where
+  toVal = toVal . toInteger
+
+instance ToVal Double where
+  toVal = JDouble
+
+instance ToVal Float where
+  toVal = JDouble . float2Double
+
+instance ToVal Char where
+  toVal = JChar
+
+instance ToVal String where
+  toVal = JStr
+
+toLiteral :: ToVal a => a -> Expr
+toLiteral = LiteralExpr . toVal
+
+toValI :: Integral a => a -> Val
+toValI = toVal . toInteger
+
+toValF :: Float -> Val
+toValF = toVal . float2Double
+
+toValD :: Double -> Val
+toValD = toVal
+
+toLiteralI :: Integral a => a -> Expr
+toLiteralI = LiteralExpr . toValI
+
+toLiteralF :: Float -> Expr
+toLiteralF = LiteralExpr . toValF
+
+toLiteralD :: Double -> Expr
+toLiteralD = LiteralExpr . toValD
+
+
+--
+-- FromVal class
+--
+class Typeable a => FromVal a where
+  fromVal :: Val -> a
+  fromVal a = fromMaybe (
+      error $
+        "Failed to convert Janus value of type " ++ show (toConstr a)
+        ++ " to Haskell value of type " ++ show (typeOf (undefined :: a))
+    ) (tryFromVal a)
+
+  tryFromVal :: Val -> Maybe a
+
+instance FromVal () where
+  tryFromVal JUnit = Just ()
+  tryFromVal _     = Nothing
+
+instance FromVal Bool where
+  tryFromVal (JBool b) = Just b
+  tryFromVal _         = Nothing
+
+instance FromVal Integer where
+  tryFromVal (JInt b) = Just b
+  tryFromVal _        = Nothing
+
+instance FromVal Int where
+  tryFromVal (JInt b) = Just . fromInteger $ b
+  tryFromVal _        = Nothing
+
+instance FromVal Float where
+  tryFromVal (JDouble d) = Just . double2Float $ d
+  tryFromVal _           = Nothing
+
+instance FromVal Double where
+  tryFromVal (JDouble d) = Just d
+  tryFromVal _           = Nothing
+
+instance FromVal Char where
+  tryFromVal (JChar c) = Just c
+  tryFromVal _         = Nothing
+
+instance FromVal String where
+  tryFromVal (JStr s) = Just s
+  tryFromVal _        = Nothing
+
+
+--
+-- Expressions & statements
+--
+data Expr = LiteralExpr Val
           | BlockExpr Block
 
           | ParenExpr Expr
@@ -82,8 +209,10 @@ data Expr = LiteralExpr
           | ReturnExpr Expr
           deriving (Show, Eq)
 
+
 data LetDecl = LetDecl Ident Expr
              deriving (Show, Eq)
+
 
 data FnDecl = FnDecl {
     fnName   :: Ident,
@@ -92,8 +221,10 @@ data FnDecl = FnDecl {
   }
   deriving (Show, Eq)
 
+
 newtype Block = Block [Stmt]
               deriving (Show, Eq)
+
 
 data Stmt = LetDeclStmt LetDecl
           | FnDeclStmt FnDecl
