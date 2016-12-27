@@ -262,9 +262,6 @@ instance Evaluable Expr where
 iie :: String -> InterpM a
 iie = throwError . InternalError
 
-retv :: ToVal a => a -> InterpM Val
-retv = return . toVal
-
 wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
