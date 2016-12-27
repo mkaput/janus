@@ -87,14 +87,17 @@ instance Evaluable Val where
 instance Evaluable EvalError where
   eval = throwError
 
+instance Evaluable Lvalue where
+  eval (IndexLv v' idx') = iie "not implemented yet"
+
+  eval (Path p')         = iie "not implemented yet"
+
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
 
   eval (BlockExpr block') = iie "not implemented yet"
 
   eval (ParenExpr e') = eval e'
-
-  eval (IndexExpr e' idx') = iie "not implemented yet"
 
   eval (CallExpr e' args') = iie "not implemented yet"
 
@@ -254,6 +257,8 @@ instance Evaluable Expr where
   eval ContinueExpr = iie "not implemented yet"
 
   eval (ReturnExpr e') = iie "not implemented yet"
+
+  eval (LvalueExpr lv) = eval lv
 
 
 --

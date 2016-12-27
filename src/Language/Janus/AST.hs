@@ -144,6 +144,14 @@ instance FromVal String where
 
 
 --
+-- Lvalues
+--
+data Lvalue = Path Ident
+            | IndexLv Expr Expr
+            deriving (Show, Eq)
+
+
+--
 -- Expressions & statements
 --
 data Expr = LiteralExpr Val
@@ -151,7 +159,6 @@ data Expr = LiteralExpr Val
 
           | ParenExpr Expr
 
-          | IndexExpr Expr Expr
           | CallExpr Expr [Expr]
 
           | PostfixIncExpr Expr
@@ -207,6 +214,8 @@ data Expr = LiteralExpr Val
           | BreakExpr
           | ContinueExpr
           | ReturnExpr Expr
+
+          | LvalueExpr Lvalue
           deriving (Show, Eq)
 
 
