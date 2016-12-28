@@ -4,6 +4,7 @@
 module Language.Janus.Interp (
   EvalError(..),
 
+  maxObjCount,
   EvalState(..),
   emptyState,
   InterpM,
@@ -29,7 +30,9 @@ run' :: Evaluable a => EvalState -> a -> IO (Either EvalError Val)
 run' st ast = runExceptT (evalStateT (eval ast) st)
 
 run :: Evaluable a => a -> IO (Either EvalError Val)
-run = run' emptyState
+run ast = do
+  st <- emptyState
+  run' st ast
 
 
 --
@@ -221,9 +224,6 @@ instance Evaluable Expr where
 --
 -- Misc
 --
-iie :: String -> InterpM a
-iie = throwError . InternalError
-
 wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
