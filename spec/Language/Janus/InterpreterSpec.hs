@@ -14,6 +14,8 @@ import           Language.Janus.Interp
 main = hspec spec
 
 spec = do
+  describe "maxObjCount" . it "> 0" $ maxObjCount `shouldSatisfy` (> 0)
+
   describe "eval of Val" $ do
     it "correctly evaluates JUnit" $ JUnit `shouldEval` JUnit
     it "correctly evaluates JBool" $ JBool True `shouldEval` JBool True
@@ -68,13 +70,17 @@ shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
 shouldEval' st ast expected = run' st ast `shouldReturn` Right expected
 
 shouldEval :: Evaluable a => a -> Val -> Expectation
-shouldEval = shouldEval' emptyState
+shouldEval ast expected = do
+  st <- emptyState
+  shouldEval' st ast expected
 
 shouldEvalThrow' :: Evaluable a => EvalState -> a -> EvalError -> Expectation
 shouldEvalThrow' st ast err = run' st ast `shouldReturn` Left err
 
 shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
-shouldEvalThrow = shouldEvalThrow' emptyState
+shouldEvalThrow ast err = do
+  st <- emptyState
+  shouldEvalThrow' st ast err
 
 shouldEvalThrowTypeError' :: Evaluable a => EvalState -> a -> Expectation
 shouldEvalThrowTypeError' st ast = do
@@ -85,4 +91,6 @@ shouldEvalThrowTypeError' st ast = do
       "program did not throw TypeError, but instead returned:\n" ++ show x
 
 shouldEvalThrowTypeError :: Evaluable a => a -> Expectation
-shouldEvalThrowTypeError = shouldEvalThrowTypeError' emptyState
+shouldEvalThrowTypeError ast = do
+  st <- emptyState
+  shouldEvalThrowTypeError' st ast

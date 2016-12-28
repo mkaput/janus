@@ -1,4 +1,6 @@
-module Language.Janus () where
+module Language.Janus (
+  maxObjCount
+) where
 
 import           Language.Janus.AST
 import           Language.Janus.Interp
