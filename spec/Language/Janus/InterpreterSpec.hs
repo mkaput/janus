@@ -65,17 +65,13 @@ spec = do
 
 
 shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
-shouldEval' st ast expected = do
-  result <- run' st ast
-  result `shouldBe` Right expected
+shouldEval' st ast expected = run' st ast `shouldReturn` Right expected
 
 shouldEval :: Evaluable a => a -> Val -> Expectation
 shouldEval = shouldEval' emptyState
 
 shouldEvalThrow' :: Evaluable a => EvalState -> a -> EvalError -> Expectation
-shouldEvalThrow' st ast err = do
-  result <- run' st ast
-  result `shouldBe` Left err
+shouldEvalThrow' st ast err = run' st ast `shouldReturn` Left err
 
 shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
 shouldEvalThrow = shouldEvalThrow' emptyState
