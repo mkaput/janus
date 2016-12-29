@@ -5,11 +5,16 @@ module Language.Janus.Interp (
   EvalError(..),
 
   maxObjCount,
+
   EvalState(..),
   emptyState,
+
   InterpM,
+
+  allSymbols,
+
+  runInterpM,
   run,
-  run',
 
   Evaluable,
   eval
@@ -26,13 +31,11 @@ import           Language.Janus.Interp.Error
 import           Language.Janus.Interp.Monad
 
 
-run' :: Evaluable a => EvalState -> a -> IO (Either EvalError Val)
-run' st ast = runExceptT (evalStateT (eval ast) st)
+runInterpM :: InterpM a -> IO (Either EvalError a)
+runInterpM m = do { st <- emptyState; runExceptT (evalStateT m st) }
 
 run :: Evaluable a => a -> IO (Either EvalError Val)
-run ast = do
-  st <- emptyState
-  run' st ast
+run = runInterpM . eval
 
 
 --

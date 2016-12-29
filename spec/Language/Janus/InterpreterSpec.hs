@@ -16,6 +16,11 @@ main = hspec spec
 spec = do
   describe "maxObjCount" . it "> 0" $ maxObjCount `shouldSatisfy` (> 0)
 
+  describe "allSymbols" $
+    it "returns [] for empty state" $
+      runInterpM allSymbols `shouldReturn` Right []
+
+
   describe "eval of Val" $ do
     it "correctly evaluates JUnit" $ JUnit `shouldEval` JUnit
     it "correctly evaluates JBool" $ JBool True `shouldEval` JBool True
@@ -66,31 +71,16 @@ spec = do
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
 
-shouldEval' :: Evaluable a => EvalState -> a -> Val -> Expectation
-shouldEval' st ast expected = run' st ast `shouldReturn` Right expected
-
 shouldEval :: Evaluable a => a -> Val -> Expectation
-shouldEval ast expected = do
-  st <- emptyState
-  shouldEval' st ast expected
-
-shouldEvalThrow' :: Evaluable a => EvalState -> a -> EvalError -> Expectation
-shouldEvalThrow' st ast err = run' st ast `shouldReturn` Left err
+shouldEval ast expected = run ast `shouldReturn` Right expected
 
 shouldEvalThrow :: Evaluable a => a -> EvalError -> Expectation
-shouldEvalThrow ast err = do
-  st <- emptyState
-  shouldEvalThrow' st ast err
+shouldEvalThrow ast err =  run ast `shouldReturn` Left err
 
-shouldEvalThrowTypeError' :: Evaluable a => EvalState -> a -> Expectation
-shouldEvalThrowTypeError' st ast = do
-  result <- run' st ast
+shouldEvalThrowTypeError :: Evaluable a => a -> Expectation
+shouldEvalThrowTypeError ast = do
+  result <- run ast
   case result of
     Left OpCallTypeError{..} -> True `shouldBe` True
     x -> expectationFailure $
       "program did not throw TypeError, but instead returned:\n" ++ show x
-
-shouldEvalThrowTypeError :: Evaluable a => a -> Expectation
-shouldEvalThrowTypeError ast = do
-  st <- emptyState
-  shouldEvalThrowTypeError' st ast
