@@ -56,6 +56,7 @@ test-suite janus-spec
                        Language.Janus.InterpreterSpec
   build-depends:       base,
                        janus,
+                       HUnit,
                        hspec == 2.2.*,
                        QuickCheck == 2.8.*,
                        parsec,

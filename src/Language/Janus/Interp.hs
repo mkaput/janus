@@ -11,6 +11,13 @@ module Language.Janus.Interp (
 
   InterpM,
 
+  memIsFree,
+  memGetVal,
+  memGetRc,
+  memAlloc,
+  rcIncr,
+  rcDecr,
+
   allSymbols,
 
   runInterpM,

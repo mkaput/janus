@@ -13,13 +13,21 @@ module Language.Janus.Interp.Monad (
   pushScope,
   popFrame,
 
+  memIsFree,
+  memGetVal,
+  memGetRc,
+  memAlloc,
+  rcIncr,
+  rcDecr,
+
   allSymbols
 ) where
 
-import           Control.Monad               (foldM)
+import           Control.Monad               (foldM, when)
 import           Control.Monad.Except        (ExceptT, throwError)
 import           Control.Monad.IO.Class      (MonadIO, liftIO)
 import           Control.Monad.State.Strict  (StateT, get, gets, modify, put)
+import           Data.Maybe                  (isNothing)
 
 import qualified Data.HashTable.IO           as HM
 import qualified Data.Set                    as S
@@ -28,7 +36,8 @@ import           Language.Janus.AST.Val
 import           Language.Janus.Interp.Error
 
 
-type MHashTable k v = HM.BasicHashTable k v
+-- TODO Find out which implementation is the fastest
+type MHashTable k v = HM.CuckooHashTable k v
 
 
 --
@@ -44,7 +53,6 @@ maxObjCount = toInteger (maxBound :: ObjPtr)
 -- Memory Cell
 --
 data MemCell = MemCell {
-                mptr     :: ObjPtr,
                 refcount :: Word,
                 val      :: Val
               }
@@ -128,6 +136,49 @@ popFrame = do
 
 
 --
+-- State methods: References
+--
+memIsFree :: ObjPtr -> InterpM Bool
+memIsFree ptr = do { mem <- gets mem; isNothing `fmap` liftIO (HM.lookup mem ptr) }
+
+memGetVal :: ObjPtr -> InterpM Val
+memGetVal ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  return $ val cell
+
+memGetRc :: ObjPtr -> InterpM Word
+memGetRc ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  return $ refcount cell
+
+-- malloc in Haskell XD
+memAlloc :: Val -> InterpM ObjPtr
+memAlloc val = do
+  mem <- gets mem
+  ptr <- gets nextMptr
+  when (ptr == maxBound) $ throwError OutOfMemory
+  modify $ \st -> st { nextMptr = nextMptr st + 1 }
+  liftIO $ HM.insert mem ptr MemCell { refcount = 1, val = val }
+  return ptr
+
+rcIncr :: ObjPtr -> InterpM ()
+rcIncr ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  liftIO $ HM.insert mem ptr cell { refcount = refcount cell + 1 }
+
+rcDecr :: ObjPtr -> InterpM ()
+rcDecr ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  case refcount cell - 1 of
+      0  -> liftIO $ HM.delete mem ptr
+      rc -> liftIO $ HM.insert mem ptr cell { refcount = rc }
+
+
+--
 -- State methods: Symbol manipulation
 --
 allSymbols :: InterpM [String]
@@ -149,3 +200,14 @@ allSymbols = do
       kvs <- HM.toList syms
       let keys = fmap fst kvs
       return $ S.fromList keys
+
+
+--
+-- Misc
+--
+throwIfNothing :: InterpM (Maybe a) -> EvalError -> InterpM a
+throwIfNothing valM err = do
+  val' <- valM
+  case val' of
+    Nothing  -> throwError err
+    Just val -> return val
