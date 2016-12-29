@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards       #-}
 
 module Language.Janus.Interp.Monad (
   ObjPtr,
@@ -20,6 +21,9 @@ module Language.Janus.Interp.Monad (
   rcIncr,
   rcDecr,
 
+  lookupSymbol,
+  putSymbol,
+  dropSymbol,
   allSymbols
 ) where
 
@@ -137,7 +141,7 @@ popFrame = do
 -- State methods: References
 --
 memIsFree :: ObjPtr -> InterpM Bool
-memIsFree ptr = do { mem <- gets mem; isNothing `fmap` liftIO (HM.lookup mem ptr) }
+memIsFree ptr = do { mem <- gets mem; isNothing <$> liftIO (HM.lookup mem ptr) }
 
 memGetVal :: ObjPtr -> InterpM Val
 memGetVal ptr = do
@@ -179,6 +183,22 @@ rcDecr ptr = do
 --
 -- State methods: Symbol manipulation
 --
+lookupSymbol :: String -> InterpM ObjPtr
+lookupSymbol name = gets stack >>= doLookup Nothing
+  where
+    doLookup :: Maybe ObjPtr -> [StackFrame] -> InterpM ObjPtr
+    doLookup (Just ptr) _ = return ptr
+    doLookup _ []         = throwError $ UndefinedSymbol name
+    doLookup Nothing (fr:frs) = do
+      l <- liftIO $ HM.lookup (symbols fr) name
+      doLookup l frs
+
+putSymbol :: String -> ObjPtr -> InterpM ()
+putSymbol name val = undefined
+
+dropSymbol :: String -> InterpM ()
+dropSymbol name = undefined
+
 allSymbols :: InterpM [String]
 allSymbols = do
   stack <- gets stack
@@ -196,7 +216,7 @@ allSymbols = do
     getNames :: MHashTable String ObjPtr -> IO (S.Set String)
     getNames syms = do
       kvs <- HM.toList syms
-      let keys = fmap fst kvs
+      let keys = map fst kvs
       return $ S.fromList keys
 
 

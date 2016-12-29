@@ -11,6 +11,9 @@ module Language.Janus.Interp (
 
   InterpM,
 
+  pushScope,
+  popFrame,
+
   memIsFree,
   memGetVal,
   memGetRc,
@@ -18,6 +21,9 @@ module Language.Janus.Interp (
   rcIncr,
   rcDecr,
 
+  lookupSymbol,
+  putSymbol,
+  dropSymbol,
   allSymbols,
 
   runInterpM,

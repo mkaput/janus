@@ -10,9 +10,10 @@ data EvalError = OpCallTypeError {
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
                 }
-               | OutOfMemory
-               | InvalidPointer Word
                | InternalError String
+               | InvalidPointer Word
+               | OutOfMemory
+               | UndefinedSymbol String
                deriving (Eq, Ord)
 
 instance Show EvalError where
@@ -32,8 +33,10 @@ instance Show EvalError where
         in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
       joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
 
-  show OutOfMemory = "out of memory"
+  show (InternalError msg) = "Internal error: " ++ msg
 
   show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" ptr
 
-  show (InternalError msg) = "Internal error: " ++ msg
+  show OutOfMemory = "out of memory"
+
+  show (UndefinedSymbol name) = "undefined symbol " ++ name
