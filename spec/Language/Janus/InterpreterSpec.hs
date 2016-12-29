@@ -9,6 +9,7 @@ import           Test.QuickCheck
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State.Strict
+import           Data.List                  (sort)
 
 import           Language.Janus.AST
 import           Language.Janus.Interp
@@ -42,10 +43,21 @@ spec = do
       let m = runInterpM $ memGetVal 0
       in m `shouldReturn` Left (InvalidPointer 0)
 
+  -- describe "symbol manipulating"
 
-  describe "allSymbols" $
-    it "returns [] for empty state" $
-      runInterpM allSymbols `shouldReturn` Right []
+
+  describe "allSymbols" $ do
+    it "works" . testInterpM $ do
+      void $ memAlloc JUnit
+      putSymbol "a" 0
+      putSymbol "b" 0
+      pushScope
+      putSymbol "c" 0
+      putSymbol "d" 0
+      (sort <$> allSymbols) `shouldInterp` ["a", "b", "c", "d"]
+
+    it "returns [] for empty state" . testInterpM $
+      allSymbols `shouldInterp` []
 
 
   describe "eval of Val" $ do
