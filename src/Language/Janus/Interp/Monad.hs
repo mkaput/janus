@@ -189,9 +189,10 @@ lookupSymbol name = gets stack >>= doLookup Nothing
     doLookup :: Maybe ObjPtr -> [StackFrame] -> InterpM ObjPtr
     doLookup (Just ptr) _ = return ptr
     doLookup _ []         = throwError $ UndefinedSymbol name
-    doLookup Nothing (fr:frs) = do
-      l <- liftIO $ HM.lookup (symbols fr) name
+    doLookup _ (ScopeFrame{symbols=syms}:frs) = do
+      l <- liftIO $ HM.lookup syms name
       doLookup l frs
+    doLookup _ (_:frs) = doLookup Nothing frs
 
 putSymbol :: String -> ObjPtr -> InterpM ()
 putSymbol name val = undefined
