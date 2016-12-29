@@ -3,12 +3,15 @@ module Language.Janus.Interp.Error (
 ) where
 
 import           Data.Typeable (TypeRep)
+import           Text.Printf   (printf)
 
 data EvalError = OpCallTypeError {
                   opName    :: String,
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
                 }
+               | OutOfMemory
+               | InvalidPointer Word
                | InternalError String
                deriving (Eq, Ord)
 
@@ -28,5 +31,9 @@ instance Show EvalError where
           ret = last ls
         in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
       joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
+
+  show OutOfMemory = "out of memory"
+
+  show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" ptr
 
   show (InternalError msg) = "Internal error: " ++ msg

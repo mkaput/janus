@@ -3,8 +3,10 @@
 module Language.Janus.InterpreterSpec where
 
 import           Test.Hspec
+import           Test.HUnit                 (assertFailure)
 import           Test.QuickCheck
 
+import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State.Strict
 
@@ -15,6 +17,31 @@ main = hspec spec
 
 spec = do
   describe "maxObjCount" . it "> 0" $ maxObjCount `shouldSatisfy` (> 0)
+
+
+  describe "GC" $ do
+    it "works" . testInterpM $ do
+      ptr <- memAlloc (JInt 42)
+
+      liftIO $ ptr `shouldBe` 0
+      memIsFree ptr `shouldInterp` False
+      memGetVal ptr `shouldInterp` JInt 42
+      memGetRc ptr `shouldInterp` 1
+
+      rcIncr ptr
+      memGetRc ptr `shouldInterp` 2
+
+      rcDecr ptr
+      memGetRc ptr `shouldInterp` 1
+
+      rcDecr ptr
+      memIsFree ptr `shouldInterp` True
+
+
+    it "memGetVal throws error for invalid pointer" $
+      let m = runInterpM $ memGetVal 0
+      in m `shouldReturn` Left (InvalidPointer 0)
+
 
   describe "allSymbols" $
     it "returns [] for empty state" $
@@ -70,6 +97,18 @@ spec = do
     it "\"a\" + 'a' == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral 'a') `shouldEval` toVal "aa"
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
+
+testInterpM :: InterpM a -> Expectation
+testInterpM m = do
+  result <- runInterpM m
+  case result of
+    Right _  -> True `shouldBe` True
+    Left err -> assertFailure $ show err
+
+shouldInterp :: (Eq a, Show a) => InterpM a -> a -> InterpM ()
+shouldInterp given expected = void $ do
+  g <- given
+  liftIO $ g `shouldBe` expected
 
 shouldEval :: Evaluable a => a -> Val -> Expectation
 shouldEval ast expected = run ast `shouldReturn` Right expected
