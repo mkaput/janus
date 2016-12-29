@@ -19,7 +19,7 @@ module Language.Janus.Interp.Monad (
 import           Control.Monad               (foldM)
 import           Control.Monad.Except        (ExceptT, throwError)
 import           Control.Monad.IO.Class      (MonadIO, liftIO)
-import           Control.Monad.State.Strict  (StateT, get, put)
+import           Control.Monad.State.Strict  (StateT, get, gets, modify, put)
 
 import qualified Data.HashTable.IO           as HM
 import qualified Data.Set                    as S
@@ -103,9 +103,7 @@ iie = throwError . InternalError
 -- State methods: Stack manipulation
 --
 rawPushFrame :: StackFrame -> InterpM ()
-rawPushFrame sf = do
-  st <- get
-  put st { stack = sf : stack st }
+rawPushFrame sf = modify (\st -> st { stack = sf : stack st })
 
 pushScope :: InterpM ()
 pushScope = newScopeFrame >>= rawPushFrame
@@ -122,11 +120,11 @@ rawPopFrame = do
 popFrame :: InterpM ()
 popFrame = do
   frame <- rawPopFrame
-  free frame
+  freeFrame frame
   where
-    free :: StackFrame -> InterpM ()
-    free ScopeFrame{symbols=symbols} = iie "freeing scopes is not implemented yet"
-    free _                           = return ()
+    freeFrame :: StackFrame -> InterpM ()
+    freeFrame ScopeFrame{symbols=symbols} = iie "freeing scopes is not implemented yet"
+    freeFrame _                           = return ()
 
 
 --
@@ -134,10 +132,10 @@ popFrame = do
 --
 allSymbols :: InterpM [String]
 allSymbols = do
-  state <- get
+  stack <- gets stack
   symbolSet <- liftIO
     . foldM aggfn S.empty
-    $ stack state
+    $ stack
   return $ S.toList symbolSet
   where
     aggfn :: S.Set String -> StackFrame -> IO (S.Set String)
