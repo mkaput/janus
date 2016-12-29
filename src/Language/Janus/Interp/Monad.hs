@@ -23,7 +23,7 @@ module Language.Janus.Interp.Monad (
   allSymbols
 ) where
 
-import           Control.Monad               (foldM, when)
+import           Control.Monad
 import           Control.Monad.Except        (ExceptT, throwError)
 import           Control.Monad.IO.Class      (MonadIO, liftIO)
 import           Control.Monad.State.Strict  (StateT, get, gets, modify, put)
@@ -128,11 +128,9 @@ rawPopFrame = do
 popFrame :: InterpM ()
 popFrame = do
   frame <- rawPopFrame
-  freeFrame frame
-  where
-    freeFrame :: StackFrame -> InterpM ()
-    freeFrame ScopeFrame{symbols=symbols} = iie "freeing scopes is not implemented yet"
-    freeFrame _                           = return ()
+  case frame of
+    ScopeFrame{symbols=syms} -> liftIO (HM.toList syms) >>= mapM_ (rcDecr . snd)
+    _ -> return ()
 
 
 --
