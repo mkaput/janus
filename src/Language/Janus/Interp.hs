@@ -2,29 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.Interp (
-  EvalError(..),
-
-  maxObjCount,
-
-  EvalState(..),
-  emptyState,
-
-  InterpM,
-
-  pushScope,
-  popFrame,
-
-  memIsFree,
-  memGetVal,
-  memGetRc,
-  memAlloc,
-  rcIncr,
-  rcDecr,
-
-  lookupSymbol,
-  putSymbol,
-  dropSymbol,
-  allSymbols,
+  module Language.Janus.Interp.Error,
+  module Language.Janus.Interp.Monad,
 
   runInterpM,
   run,
