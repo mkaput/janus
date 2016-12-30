@@ -24,6 +24,9 @@ import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           GHC.Float     (double2Float, float2Double)
 
 
+--
+-- Val
+--
 data Val = JUnit
          | JBool Bool
          | JInt Integer
@@ -54,6 +57,9 @@ haskellTypeRep (JStr a)    = typeOf a
 --
 class Typeable a => ToVal a where
   toVal :: a -> Val
+
+instance ToVal Val where
+  toVal = id
 
 instance ToVal () where
   toVal _ = JUnit
@@ -101,6 +107,12 @@ class Typeable a => FromVal a where
     ) (tryFromVal a)
 
   tryFromVal :: Val -> Maybe a
+  tryFromVal = Just . fromVal
+
+  {-# MINIMAL fromVal | tryFromVal #-}
+
+instance FromVal Val where
+  fromVal = id
 
 instance FromVal () where
   tryFromVal JUnit = Just ()
