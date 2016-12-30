@@ -9,7 +9,6 @@ module Language.Janus.AST (
   toLiteralF,
   toLiteralD,
 
-  Ident(..),
   Lvalue(..),
   Expr(..),
   LetDecl(..),
@@ -35,16 +34,9 @@ toLiteralD = LiteralExpr . toValD
 
 
 --
--- Tokens
---
-newtype Ident = Ident String
-              deriving (Show, Eq, Ord)
-
-
---
 -- Lvalues
 --
-data Lvalue = Path Ident
+data Lvalue = Path String
             | IndexLv Expr Expr
             deriving (Show, Eq)
 
@@ -117,13 +109,13 @@ data Expr = LiteralExpr Val
           deriving (Show, Eq)
 
 
-data LetDecl = LetDecl Ident Expr
+data LetDecl = LetDecl String Expr
              deriving (Show, Eq)
 
 
 data FnDecl = FnDecl {
-    name   :: Ident,
-    params :: [Ident],
+    name   :: String,
+    params :: [String],
     body   :: Block
   }
   deriving (Show, Eq)
