@@ -7,6 +7,11 @@ module Language.Janus.Interp.Monad (
   InterpM,
   iie,
 
+  refIdxGet,
+  refIdxSet,
+  deref,
+  refSet,
+
   pushScope,
   popFrame,
 
@@ -97,6 +102,24 @@ type InterpM = StateT EvalState (ExceptT EvalError IO)
 
 iie :: String -> InterpM a
 iie = throwError . InternalError
+
+
+--
+-- Ref methods
+--
+refIdxGet :: Ref -> Val -> InterpM Val
+refIdxGet ref idx = undefined
+
+refIdxSet :: Ref -> Val -> Val -> InterpM ()
+refIdxSet ref idx newVal = undefined
+
+deref :: Ref -> InterpM Val
+deref (PtrRef ptr)       = memGetVal ptr
+deref (IndexRef ref idx) = refIdxGet ref idx
+
+refSet :: Ref -> Val -> InterpM ()
+refSet (PtrRef ptr) newVal       = memSet ptr newVal
+refSet (IndexRef ref idx) newVal = refIdxSet ref idx newVal
 
 
 --
