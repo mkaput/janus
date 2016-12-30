@@ -18,6 +18,7 @@ module Language.Janus.Interp.Monad (
   memGetVal,
   memGetRc,
   memAlloc,
+  memSet,
   rcIncr,
   rcDecr,
 
@@ -164,6 +165,12 @@ memAlloc val = do
   modify $ \st -> st { nextMptr = nextMptr st + 1 }
   liftIO $ HM.insert mem ptr MemCell { refcount = 1, val = val }
   return ptr
+
+memSet :: ObjPtr -> Val -> InterpM ()
+memSet ptr val = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  liftIO $ HM.insert mem ptr cell { val = val }
 
 rcIncr :: ObjPtr -> InterpM ()
 rcIncr ptr = do
