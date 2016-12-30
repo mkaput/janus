@@ -2,8 +2,10 @@ module Language.Janus.Interp.Error (
   EvalError(..)
 ) where
 
-import           Data.Typeable (TypeRep)
-import           Text.Printf   (printf)
+import           Data.Typeable          (TypeRep)
+import           Text.Printf            (printf)
+
+import           Language.Janus.AST.Val
 
 data EvalError = OpCallTypeError {
                   opName    :: String,
@@ -11,7 +13,7 @@ data EvalError = OpCallTypeError {
                   givenSig  :: [TypeRep]
                 }
                | InternalError String
-               | InvalidPointer Word
+               | InvalidPointer Ptr
                | OutOfMemory
                | UndefinedSymbol String
                deriving (Eq, Ord)
@@ -35,7 +37,7 @@ instance Show EvalError where
 
   show (InternalError msg) = "Internal error: " ++ msg
 
-  show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" ptr
+  show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
 
   show OutOfMemory = "out of memory"
 

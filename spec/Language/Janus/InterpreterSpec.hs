@@ -17,14 +17,11 @@ import           Language.Janus.Interp
 main = hspec spec
 
 spec = do
-  describe "maxObjCount" . it "> 0" $ maxObjCount `shouldSatisfy` (> 0)
-
-
   describe "GC" $ do
     it "works" . testInterpM $ do
       ptr <- memAlloc (JInt 42)
 
-      liftIO $ ptr `shouldBe` 0
+      liftIO $ ptr `shouldBe` Ptr 0
       memIsFree ptr `shouldInterp` False
       memGetVal ptr `shouldInterp` JInt 42
       memGetRc ptr `shouldInterp` 0
@@ -37,8 +34,8 @@ spec = do
 
 
     it "memGetVal throws error for invalid pointer" $
-      let m = runInterpM $ memGetVal 0
-      in m `shouldReturn` Left (InvalidPointer 0)
+      let m = runInterpM $ memGetVal (Ptr 0)
+      in m `shouldReturn` Left (InvalidPointer $ Ptr 0)
 
 
   describe "symbol manipulating" $

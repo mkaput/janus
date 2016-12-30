@@ -3,6 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Language.Janus.AST.Val (
+  Ptr(..),
+  getAddress,
+
+
   Val(..),
   showVal,
   haskellTypeRep,
@@ -22,6 +26,26 @@ import           Data.Data     (Data, toConstr)
 import           Data.Maybe    (fromMaybe)
 import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           GHC.Float     (double2Float, float2Double)
+
+import           Data.Hashable (Hashable, hash, hashWithSalt)
+
+
+--
+-- Pointer
+--
+newtype Ptr = Ptr Word
+            deriving (Eq, Ord, Show, Data, Typeable)
+
+instance Bounded Ptr where
+  minBound = Ptr minBound
+  maxBound = Ptr maxBound
+
+instance Hashable Ptr where
+  hashWithSalt s (Ptr p) = hashWithSalt s p
+  hash = hash . getAddress
+
+getAddress :: Ptr -> Word
+getAddress (Ptr p) = p
 
 
 --

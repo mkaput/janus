@@ -27,6 +27,7 @@ library
                        Language.Janus.Interp.Monad
   build-depends:       base >= 4.7 && < 5,
                        containers == 0.5.*,
+                       hashable,
                        hashtables == 1.2.*,
                        mtl == 2.2.*,
                        parsec == 3.1.*
