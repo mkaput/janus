@@ -2,19 +2,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 
 module Language.Janus.AST (
-  Val(..),
-  showVal,
-  haskellTypeRep,
-
-  ToVal,
-  toVal,
-  toValI,
-  toValF,
-  toValD,
-
-  FromVal,
-  fromVal,
-  tryFromVal,
+  module Language.Janus.AST.Val,
 
   toLiteral,
   toLiteralI,
@@ -22,17 +10,11 @@ module Language.Janus.AST (
   toLiteralD,
 
   Ident(..),
-
   Lvalue(..),
-
   Expr(..),
-
   LetDecl(..),
-
   FnDecl(..),
-
   Block(..),
-
   Stmt(..)
 ) where
 
