@@ -4,6 +4,8 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.AST (
+  Program(..),
+
   Ptr(..),
   getAddress,
 
@@ -30,8 +32,6 @@ module Language.Janus.AST (
 
   Lvalue(..),
   Expr(..),
-  LetDecl(..),
-  FnDecl(..),
   Block(..),
   Stmt(..)
 ) where
@@ -43,6 +43,8 @@ import           GHC.Float     (double2Float, float2Double)
 
 import           Data.Hashable (Hashable, hash, hashWithSalt)
 
+
+newtype Program = Program [Stmt]
 
 -----------------------------------------------------------------------------
 --
@@ -310,23 +312,16 @@ data Expr = LiteralExpr Val
           deriving (Show, Eq)
 
 
-data LetDecl = LetDecl String Expr
-             deriving (Show, Eq)
-
-
-data FnDecl = FnDecl {
-    name   :: String,
-    params :: [String],
-    body   :: Block
-  }
-  deriving (Show, Eq)
-
-
 newtype Block = Block [Stmt]
               deriving (Show, Eq)
 
 
-data Stmt = LetDeclStmt LetDecl
-          | FnDeclStmt FnDecl
+data Stmt = LetDecl String Expr
+          | FnDecl {
+              name   :: String,
+              params :: [String],
+              body   :: Block
+            }
+          | SubstStmt Lvalue Expr
           | ExprStmt Expr
           deriving (Show, Eq)
