@@ -6,6 +6,7 @@ module Language.Janus.AST.Val (
   Ptr(..),
   getAddress,
 
+  Ref(..),
 
   Val(..),
   showVal,
@@ -49,6 +50,14 @@ getAddress (Ptr p) = p
 
 
 --
+-- Ref
+--
+data Ref = PtrRef Ptr
+         | IndexRef Ref Val
+         deriving (Show, Eq, Ord, Data, Typeable)
+
+
+--
 -- Val
 --
 data Val = JUnit
@@ -57,6 +66,7 @@ data Val = JUnit
          | JDouble Double
          | JChar Char
          | JStr String
+         | JRef Ref
          deriving (Show, Eq, Ord, Data, Typeable)
 
 showVal :: Val -> String
