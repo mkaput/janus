@@ -2,26 +2,164 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.Interp (
-  module Language.Janus.Interp.Error,
-  module Language.Janus.Interp.Monad,
+  EvalState,
+  emptyState,
 
+  EvalError(..),
+
+  InterpM,
   runInterpM,
   run,
+
+  refIdxGet,
+  refIdxSet,
+  deref,
+  refSet,
+
+  pushScope,
+  popFrame,
+
+  memIsFree,
+  memGetVal,
+  memGetRc,
+  memAlloc,
+  memSet,
+  rcIncr,
+  rcDecr,
+
+  lookupSymbol,
+  putSymbol,
+  evalSymbol,
+  allSymbols,
 
   Evaluable,
   eval
 ) where
 
-import           Control.Monad.Except        (runExceptT, throwError)
-import           Control.Monad.State.Strict  (evalStateT)
-import           Data.Bits                   (complement, rotateL, rotateR, xor,
-                                              (.&.), (.|.))
-import           Data.Typeable               (TypeRep, Typeable, typeOf)
+import           Control.Monad
+import           Control.Monad.Except
+import           Control.Monad.IO.Class
+import           Control.Monad.State.Strict
+import           Data.Bits                  (complement, rotateL, rotateR, xor,
+                                             (.&.), (.|.))
+import           Data.Maybe                 (isNothing)
+import           Data.Typeable              (TypeRep, Typeable, typeOf)
+import           Text.Printf                (printf)
+
+import qualified Data.HashTable.IO          as HM
+import qualified Data.Set                   as S
 
 import           Language.Janus.AST
-import           Language.Janus.Interp.Error
-import           Language.Janus.Interp.Monad
 
+
+-----------------------------------------------------------------------------
+--
+-- Memory Cell
+--
+-----------------------------------------------------------------------------
+
+data MemCell = MemCell {
+                refcount :: Word,
+                val      :: Val
+              }
+             deriving (Eq, Show)
+
+
+-----------------------------------------------------------------------------
+--
+-- StackFrame
+--
+-----------------------------------------------------------------------------
+
+data StackFrame = ScopeFrame {
+                    symbols     :: MHashTable String Ptr
+                  }
+                | CallFrame {
+                    -- TODO Implement this properly
+                    func        :: Ptr
+                  }
+
+newScopeFrame :: MonadIO m => m StackFrame
+newScopeFrame = do
+  symbols <- liftIO HM.new
+  return ScopeFrame { symbols = symbols }
+
+-- TODO newCallFrame
+
+
+-----------------------------------------------------------------------------
+--
+-- EvalState
+--
+-----------------------------------------------------------------------------
+
+data EvalState = EvalState {
+                  nextMptr :: Ptr,
+                  mem      :: MHashTable Ptr MemCell,
+                  stack    :: [StackFrame]
+                }
+
+emptyState :: MonadIO m => m EvalState
+emptyState = do
+  mem <- liftIO HM.new
+  globalScope <- newScopeFrame
+  return EvalState {
+      nextMptr = Ptr 0,
+      mem = mem,
+      stack = [globalScope]
+    }
+
+
+-----------------------------------------------------------------------------
+--
+-- Interpreter error
+--
+-----------------------------------------------------------------------------
+
+data EvalError = OpCallTypeError {
+                  opName    :: String,
+                  triedSigs :: [[TypeRep]],
+                  givenSig  :: [TypeRep]
+                }
+               | InternalError String
+               | InvalidPointer Ptr
+               | OutOfMemory
+               | UndefinedSymbol String
+               deriving (Eq, Ord)
+
+instance Show EvalError where
+  show OpCallTypeError{opName=opName, triedSigs=ts, givenSig=gs} =
+    "Type mismatch when calling " ++ opName
+      ++ "\n  Tried to evaluate: " ++ got
+      ++ "\n  But it has following overloads:\n" ++ expected
+    where
+      expected = foldl1 (\a b -> a ++ ",\n" ++ b)
+               . map ((("    " ++ opName ++ ": ") ++) . joinTypes)
+               $ ts
+      got = opName ++ ": (" ++ joinArgTypes gs ++ ") -> ???"
+
+      joinTypes ls = let
+          args = init ls;
+          ret = last ls
+        in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
+      joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
+
+  show (InternalError msg) = "Internal error: " ++ msg
+
+  show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
+
+  show OutOfMemory = "out of memory"
+
+  show (UndefinedSymbol name) = "undefined symbol " ++ name
+
+
+-----------------------------------------------------------------------------
+--
+-- InterpM
+--
+-----------------------------------------------------------------------------
+
+type InterpM = StateT EvalState (ExceptT EvalError IO)
 
 runInterpM :: InterpM a -> IO (Either EvalError a)
 runInterpM m = do { st <- emptyState; runExceptT (evalStateT m st) }
@@ -30,9 +168,169 @@ run :: Evaluable a => a -> IO (Either EvalError Val)
 run = runInterpM . eval
 
 
+-----------------------------------------------------------------------------
+--
+-- Ref methods
+--
+-----------------------------------------------------------------------------
+
+refIdxGet :: Ref -> Val -> InterpM Val
+refIdxGet ref idx = undefined
+
+refIdxSet :: Ref -> Val -> Val -> InterpM ()
+refIdxSet ref idx newVal = undefined
+
+deref :: Ref -> InterpM Val
+deref (PtrRef ptr)       = memGetVal ptr
+deref (IndexRef ref idx) = refIdxGet ref idx
+
+refSet :: Ref -> Val -> InterpM ()
+refSet (PtrRef ptr) newVal       = memSet ptr newVal
+refSet (IndexRef ref idx) newVal = refIdxSet ref idx newVal
+
+
+-----------------------------------------------------------------------------
+--
+-- State methods: Stack manipulation
+--
+-----------------------------------------------------------------------------
+
+rawPushFrame :: StackFrame -> InterpM ()
+rawPushFrame sf = modify (\st -> st { stack = sf : stack st })
+
+pushScope :: InterpM ()
+pushScope = newScopeFrame >>= rawPushFrame
+
+rawPopFrame :: InterpM StackFrame
+rawPopFrame = do
+  st <- get
+  case stack st of
+    [_] -> iie "stack underflow"
+    (top:fs) -> do
+      put st { stack = fs }
+      return top
+
+popFrame :: InterpM ()
+popFrame = do
+  frame <- rawPopFrame
+  case frame of
+    ScopeFrame{symbols=syms} -> liftIO (HM.toList syms) >>= mapM_ (rcDecr . snd)
+    _ -> return ()
+
+
+-----------------------------------------------------------------------------
+--
+-- State methods: References
+--
+-----------------------------------------------------------------------------
+
+memIsFree :: Ptr -> InterpM Bool
+memIsFree ptr = do { mem <- gets mem; isNothing <$> liftIO (HM.lookup mem ptr) }
+
+memGetVal :: Ptr -> InterpM Val
+memGetVal ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  return $ val cell
+
+memGetRc :: Ptr -> InterpM Word
+memGetRc ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  return $ refcount cell
+
+-- malloc in Haskell XD
+memAlloc :: Val -> InterpM Ptr
+memAlloc val = do
+  mem <- gets mem
+  ptr <- gets nextMptr
+  when (ptr == maxBound) $ throwError OutOfMemory
+  modify $ \st -> st { nextMptr = Ptr $ getAddress ptr + 1 }
+  liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
+  return ptr
+
+memSet :: Ptr -> Val -> InterpM ()
+memSet ptr val = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  liftIO $ HM.insert mem ptr cell { val = val }
+
+rcIncr :: Ptr -> InterpM ()
+rcIncr ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  liftIO $ HM.insert mem ptr cell { refcount = refcount cell + 1 }
+
+rcDecr :: Ptr -> InterpM ()
+rcDecr ptr = do
+  mem <- gets mem
+  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  case refcount cell - 1 of
+      0  -> liftIO $ HM.delete mem ptr
+      rc -> liftIO $ HM.insert mem ptr cell { refcount = rc }
+
+
+-----------------------------------------------------------------------------
+--
+-- State methods: Symbol manipulation
+--
+-----------------------------------------------------------------------------
+
+lookupSymbol :: String -> InterpM Ptr
+lookupSymbol name = gets stack >>= doLookup Nothing
+  where
+    doLookup :: Maybe Ptr -> [StackFrame] -> InterpM Ptr
+    doLookup (Just ptr) _ = return ptr
+    doLookup _ []         = throwError $ UndefinedSymbol name
+    doLookup _ (ScopeFrame{symbols=syms}:frs) = do
+      l <- liftIO $ HM.lookup syms name
+      doLookup l frs
+    doLookup _ (_:frs) = doLookup Nothing frs
+
+putSymbol :: String -> Ptr -> InterpM ()
+putSymbol name ptr = do
+  syms <- gets $ symbols . head . stack
+
+  rcIncr ptr
+
+  -- decrement existing reference if any
+  existingPtr' <- liftIO $ HM.lookup syms name
+  case existingPtr' of
+    Just existingPtr -> rcDecr existingPtr
+    _                -> return ()
+
+  liftIO $ HM.insert syms name ptr
+
+evalSymbol :: String -> InterpM Val
+evalSymbol name = lookupSymbol name >>= memGetVal
+
+allSymbols :: InterpM [String]
+allSymbols = do
+  stack <- gets stack
+  symbolSet <- liftIO
+    . foldM aggfn S.empty
+    $ stack
+  return $ S.toList symbolSet
+  where
+    aggfn :: S.Set String -> StackFrame -> IO (S.Set String)
+    aggfn set ScopeFrame{symbols=symbols} = do
+      names <- getNames symbols
+      return $ names `S.union` set
+    aggfn set _                           = return set
+
+    getNames :: MHashTable String Ptr -> IO (S.Set String)
+    getNames syms = do
+      kvs <- HM.toList syms
+      let keys = map fst kvs
+      return $ S.fromList keys
+
+
+-----------------------------------------------------------------------------
 --
 -- Evaluable
 --
+-----------------------------------------------------------------------------
+
 class Evaluable a where
   eval :: a -> InterpM Val
 
@@ -216,9 +514,25 @@ instance Evaluable Expr where
   eval (LvalueExpr lv) = eval lv
 
 
+-----------------------------------------------------------------------------
 --
--- Misc
+-- Utility funcitons
 --
+-----------------------------------------------------------------------------
+
+-- TODO Find out which implementation is the fastest
+type MHashTable k v = HM.CuckooHashTable k v
+
+iie :: String -> InterpM a
+iie = throwError . InternalError
+
+throwIfNothing :: InterpM (Maybe a) -> EvalError -> InterpM a
+throwIfNothing valM err = do
+  val' <- valM
+  case val' of
+    Nothing  -> throwError err
+    Just val -> return val
+
 wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
