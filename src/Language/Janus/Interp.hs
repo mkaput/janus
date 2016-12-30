@@ -32,6 +32,7 @@ module Language.Janus.Interp (
 
   Evaluable,
   eval,
+  evalDeref,
 
   valGetIdx,
   valSetIdx
@@ -127,6 +128,7 @@ data EvalError = OpCallTypeError {
                | IndexOutOfBounds
                | InternalError String
                | InvalidPointer Ptr
+               | NonRefIndexing
                | OutOfMemory
                | UndefinedSymbol String
                deriving (Eq, Ord)
@@ -153,6 +155,8 @@ instance Show EvalError where
   show (InternalError msg) = "Internal error: " ++ msg
 
   show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
+
+  show NonRefIndexing = "tried to index non-reference value"
 
   show OutOfMemory = "out of memory"
 
@@ -337,6 +341,13 @@ allSymbols = do
 class Evaluable a where
   eval :: a -> InterpM Val
 
+evalDeref :: (Evaluable a) => a -> InterpM Val
+evalDeref a' = do
+  a <- eval a'
+  case a of
+    JRef ref -> deref ref
+    a        -> return a
+
 instance Evaluable Val where
   eval = return
 
@@ -344,9 +355,15 @@ instance Evaluable EvalError where
   eval = throwError
 
 instance Evaluable Lvalue where
-  eval (IndexLv v' idx') = iie "not implemented yet"
+  eval (IndexLv v' idx') = do
+    v <- eval v'
+    idx <- eval idx'
+    case v of
+      JRef (PtrRef ptr) -> return . JRef $ IndexRef ptr idx
+      JRef _            -> iie "nested index refs are not implemented yet"
+      _                 -> throwError NonRefIndexing
 
-  eval (Path name)       = evalSymbol name
+  eval (Path name)       = (JRef . PtrRef) `fmap` lookupSymbol name
 
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
