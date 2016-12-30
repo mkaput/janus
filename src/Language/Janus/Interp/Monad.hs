@@ -24,7 +24,6 @@ module Language.Janus.Interp.Monad (
 
   lookupSymbol,
   putSymbol,
-  dropSymbol,
   allSymbols
 ) where
 
@@ -202,10 +201,18 @@ lookupSymbol name = gets stack >>= doLookup Nothing
     doLookup _ (_:frs) = doLookup Nothing frs
 
 putSymbol :: String -> ObjPtr -> InterpM ()
-putSymbol name val = undefined
+putSymbol name ptr = do
+  syms <- gets $ symbols . head . stack
 
-dropSymbol :: String -> InterpM ()
-dropSymbol name = undefined
+  rcIncr ptr
+
+  -- decrement existing reference if any
+  existingPtr' <- liftIO $ HM.lookup syms name
+  case existingPtr' of
+    Just existingPtr' -> rcDecr ptr
+    _                 -> return ()
+
+  liftIO $ HM.insert syms name ptr
 
 allSymbols :: InterpM [String]
 allSymbols = do
