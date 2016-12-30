@@ -149,6 +149,16 @@ spec = do
           eval (IndexLv (LvalueExpr (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1))) (toLiteralI 1))
       in m `shouldReturn` Left (InternalError "nested index refs are not implemented yet")
 
+  describe "eval of block" $ do
+    it "should return last stmt's value" . testInterpM $
+      eval (Block [
+          ExprStmt (toLiteralI 41),
+          ExprStmt (toLiteralI 42)
+        ]) `shouldInterp` JInt 42
+
+    it "should return unit for empty block" . testInterpM $
+      eval (Block []) `shouldInterp` JUnit
+
 
   describe "valGetIdx" $ do
     it "valGetIdx \"abc\" 1 == 'b'" . testInterpM $

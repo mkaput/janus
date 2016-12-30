@@ -354,6 +354,9 @@ instance Evaluable Val where
 instance Evaluable EvalError where
   eval = throwError
 
+instance Evaluable Program where
+  eval (Program stmts) = eval (Block stmts)
+
 instance Evaluable Lvalue where
   eval (IndexLv v' idx') = do
     v <- eval v'
@@ -532,6 +535,18 @@ instance Evaluable Expr where
   eval (ReturnExpr e') = iie "not implemented yet"
 
   eval (LvalueExpr lv) = eval lv
+
+instance Evaluable Block where
+  eval (Block stmts) = foldM (\_ stmt -> eval stmt) JUnit stmts
+
+instance Evaluable Stmt where
+  eval (LetDecl name e')                 = iie "not implemented yet"
+
+  eval FnDecl{name=n',params=p',body=b'} = iie "not implemented yet"
+
+  eval (SubstStmt lv' e')                = iie "not implemented yet"
+
+  eval (ExprStmt e')                     = eval e'
 
 
 -----------------------------------------------------------------------------
