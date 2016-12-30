@@ -11,8 +11,6 @@ module Language.Janus.Interp (
   runInterpM,
   run,
 
-  refIdxGet,
-  refIdxSet,
   deref,
   refSet,
 
@@ -174,19 +172,19 @@ run = runInterpM . eval
 --
 -----------------------------------------------------------------------------
 
-refIdxGet :: Ref -> Val -> InterpM Val
-refIdxGet ref idx = undefined
-
-refIdxSet :: Ref -> Val -> Val -> InterpM ()
-refIdxSet ref idx newVal = undefined
-
 deref :: Ref -> InterpM Val
 deref (PtrRef ptr)       = memGetVal ptr
 deref (IndexRef ref idx) = refIdxGet ref idx
+  where
+    refIdxGet :: Ref -> Val -> InterpM Val
+    refIdxGet ref idx = undefined
 
 refSet :: Ref -> Val -> InterpM ()
 refSet (PtrRef ptr) newVal       = memSet ptr newVal
 refSet (IndexRef ref idx) newVal = refIdxSet ref idx newVal
+  where
+    refIdxSet :: Ref -> Val -> Val -> InterpM ()
+    refIdxSet ref idx newVal = undefined
 
 
 -----------------------------------------------------------------------------
