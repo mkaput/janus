@@ -24,6 +24,7 @@ module Language.Janus.Interp.Monad (
 
   lookupSymbol,
   putSymbol,
+  evalSymbol,
   allSymbols
 ) where
 
@@ -162,7 +163,7 @@ memAlloc val = do
   ptr <- gets nextMptr
   when (ptr == maxBound) $ throwError OutOfMemory
   modify $ \st -> st { nextMptr = nextMptr st + 1 }
-  liftIO $ HM.insert mem ptr MemCell { refcount = 1, val = val }
+  liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
   return ptr
 
 memSet :: ObjPtr -> Val -> InterpM ()
@@ -209,10 +210,13 @@ putSymbol name ptr = do
   -- decrement existing reference if any
   existingPtr' <- liftIO $ HM.lookup syms name
   case existingPtr' of
-    Just existingPtr' -> rcDecr ptr
-    _                 -> return ()
+    Just existingPtr -> rcDecr existingPtr
+    _                -> return ()
 
   liftIO $ HM.insert syms name ptr
+
+evalSymbol :: String -> InterpM Val
+evalSymbol name = lookupSymbol name >>= memGetVal
 
 allSymbols :: InterpM [String]
 allSymbols = do

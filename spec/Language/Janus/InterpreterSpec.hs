@@ -27,12 +27,9 @@ spec = do
       liftIO $ ptr `shouldBe` 0
       memIsFree ptr `shouldInterp` False
       memGetVal ptr `shouldInterp` JInt 42
-      memGetRc ptr `shouldInterp` 1
+      memGetRc ptr `shouldInterp` 0
 
       rcIncr ptr
-      memGetRc ptr `shouldInterp` 2
-
-      rcDecr ptr
       memGetRc ptr `shouldInterp` 1
 
       rcDecr ptr
@@ -43,17 +40,28 @@ spec = do
       let m = runInterpM $ memGetVal 0
       in m `shouldReturn` Left (InvalidPointer 0)
 
-  -- describe "symbol manipulating"
+
+  describe "symbol manipulating" $
+    it "works" . testInterpM $ do
+      ptrA <- memAlloc JUnit
+      putSymbol "a" ptrA
+      evalSymbol "a" `shouldInterp` JUnit
+
+      ptrB <- memAlloc $ JInt 42
+      putSymbol "a" ptrB
+      memIsFree ptrA `shouldInterp` True
+      memIsFree ptrB `shouldInterp` False
+      evalSymbol "a" `shouldInterp` JInt 42
 
 
   describe "allSymbols" $ do
     it "works" . testInterpM $ do
-      void $ memAlloc JUnit
-      putSymbol "a" 0
-      putSymbol "b" 0
+      ptr <- memAlloc JUnit
+      putSymbol "a" ptr
+      putSymbol "b" ptr
       pushScope
-      putSymbol "c" 0
-      putSymbol "d" 0
+      putSymbol "c" ptr
+      putSymbol "d" ptr
       (sort <$> allSymbols) `shouldInterp` ["a", "b", "c", "d"]
 
     it "returns [] for empty state" . testInterpM $
