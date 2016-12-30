@@ -72,7 +72,7 @@ getAddress (Ptr p) = p
 -----------------------------------------------------------------------------
 
 data Ref = PtrRef Ptr
-         | IndexRef Ref Val
+         | IndexRef Ptr Val
          deriving (Show, Eq, Ord, Data, Typeable)
 
 

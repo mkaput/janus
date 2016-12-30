@@ -31,16 +31,21 @@ module Language.Janus.Interp (
   allSymbols,
 
   Evaluable,
-  eval
+  eval,
+
+  valGetIdx,
+  valSetIdx
 ) where
 
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.IO.Class
 import           Control.Monad.State.Strict
+
 import           Data.Bits                  (complement, rotateL, rotateR, xor,
                                              (.&.), (.|.))
-import           Data.Maybe                 (isNothing)
+import           Data.List                  (foldl')
+import           Data.Maybe                 (isNothing, listToMaybe)
 import           Data.Typeable              (TypeRep, Typeable, typeOf)
 import           Text.Printf                (printf)
 
@@ -119,6 +124,7 @@ data EvalError = OpCallTypeError {
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
                 }
+               | IndexOutOfBounds
                | InternalError String
                | InvalidPointer Ptr
                | OutOfMemory
@@ -141,6 +147,8 @@ instance Show EvalError where
           ret = last ls
         in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
       joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
+
+  show IndexOutOfBounds = "index out of bounds"
 
   show (InternalError msg) = "Internal error: " ++ msg
 
@@ -174,17 +182,14 @@ run = runInterpM . eval
 
 deref :: Ref -> InterpM Val
 deref (PtrRef ptr)       = memGetVal ptr
-deref (IndexRef ref idx) = refIdxGet ref idx
-  where
-    refIdxGet :: Ref -> Val -> InterpM Val
-    refIdxGet ref idx = undefined
+deref (IndexRef ptr idx) = memGetVal ptr >>= (`valGetIdx` idx)
 
 refSet :: Ref -> Val -> InterpM ()
 refSet (PtrRef ptr) newVal       = memSet ptr newVal
-refSet (IndexRef ref idx) newVal = refIdxSet ref idx newVal
-  where
-    refIdxSet :: Ref -> Val -> Val -> InterpM ()
-    refIdxSet ref idx newVal = undefined
+refSet (IndexRef ptr idx) newVal = do
+  currObj <- memGetVal ptr
+  newObj <- valSetIdx currObj idx newVal
+  memSet ptr newObj
 
 
 -----------------------------------------------------------------------------
@@ -510,6 +515,37 @@ instance Evaluable Expr where
   eval (ReturnExpr e') = iie "not implemented yet"
 
   eval (LvalueExpr lv) = eval lv
+
+
+-----------------------------------------------------------------------------
+--
+-- Val index accessors
+--
+-----------------------------------------------------------------------------
+
+valGetIdx :: Val -> Val -> InterpM Val
+valGetIdx (JStr s) (JInt n)
+  | n < 0 = throwError IndexOutOfBounds
+  | otherwise = return (
+        listToMaybe . map (JChar . snd) . filter ((== n) . fst) $ zip [0..] s
+      ) `throwIfNothing` IndexOutOfBounds
+valGetIdx v n = throwError OpCallTypeError {
+    opName = "a[i]",
+    triedSigs = [[typeOf "", typeOf (undefined :: Integer)]],
+    givenSig = [haskellTypeRep v, haskellTypeRep n]
+  }
+
+valSetIdx :: Val -> Val -> Val -> InterpM Val
+valSetIdx (JStr s) (JInt n) (JChar c)
+  | n < 0 = throwError IndexOutOfBounds
+  | otherwise = do
+    when (fromInteger n >= length s) $ throwError IndexOutOfBounds
+    return . JStr . map (\(i, ch) -> if i == n then c else ch) $ zip [0..] s
+valSetIdx v n x = throwError OpCallTypeError {
+    opName = "a[i] = x",
+    triedSigs = [[typeOf "", typeOf (undefined :: Integer), typeOf 'a']],
+    givenSig = [haskellTypeRep v, haskellTypeRep n, haskellTypeRep x]
+  }
 
 
 -----------------------------------------------------------------------------
