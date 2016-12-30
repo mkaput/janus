@@ -115,6 +115,32 @@ spec = do
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
 
+  describe "valGetIdx" $ do
+    it "valGetIdx \"abc\" 1 == 'b'" . testInterpM $
+      valGetIdx (JStr "abc") (JInt 1) `shouldInterp` JChar 'b'
+
+    it "valGetIdx \"\" 0 should fail" $
+      let m = runInterpM $ valGetIdx (JStr "") (JInt 0)
+      in m `shouldReturn` Left IndexOutOfBounds
+
+    it "valGetIdx \"abc\" -1 should fail" $
+      let m = runInterpM $ valGetIdx (JStr "") (JInt (-1))
+      in m `shouldReturn` Left IndexOutOfBounds
+
+
+  describe "valSetIdx" $ do
+    it "valSetIdx \"abc\" 1 'x' == \"axc\"" . testInterpM $
+      valSetIdx (JStr "abc") (JInt 1) (JChar 'x') `shouldInterp` JStr "axc"
+
+    it "valSetIdx \"\" 0 'x' should fail" $
+      let m = runInterpM $ valSetIdx (JStr "") (JInt 0) (JChar 'x')
+      in m `shouldReturn` Left IndexOutOfBounds
+
+    it "valSetIdx \"abc\" -1 'x' should fail" $
+      let m = runInterpM $ valSetIdx (JStr "") (JInt (-1)) (JChar 'x')
+      in m `shouldReturn` Left IndexOutOfBounds
+
+
 testInterpM :: InterpM a -> Expectation
 testInterpM m = do
   result <- runInterpM m
