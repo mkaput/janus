@@ -1,5 +1,4 @@
 module Language.Janus (
-  maxObjCount
 ) where
 
 import           Language.Janus.AST

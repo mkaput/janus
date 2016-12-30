@@ -1,9 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Language.Janus.Interp.Monad (
-  ObjPtr,
-  maxObjCount,
-
   EvalState,
   emptyState,
 
@@ -45,15 +42,6 @@ type MHashTable k v = HM.CuckooHashTable k v
 
 
 --
--- Object Pointer
---
-type ObjPtr = Word
-
-maxObjCount :: Integer
-maxObjCount = toInteger (maxBound :: ObjPtr)
-
-
---
 -- Memory Cell
 --
 data MemCell = MemCell {
@@ -67,11 +55,11 @@ data MemCell = MemCell {
 -- StackFrame
 --
 data StackFrame = ScopeFrame {
-                    symbols     :: MHashTable String ObjPtr
+                    symbols     :: MHashTable String Ptr
                   }
                 | CallFrame {
                     -- TODO Implement this properly
-                    func        :: ObjPtr
+                    func        :: Ptr
                   }
 
 newScopeFrame :: MonadIO m => m StackFrame
@@ -86,8 +74,8 @@ newScopeFrame = do
 -- EvalState
 --
 data EvalState = EvalState {
-                  nextMptr :: ObjPtr,
-                  mem      :: MHashTable ObjPtr MemCell,
+                  nextMptr :: Ptr,
+                  mem      :: MHashTable Ptr MemCell,
                   stack    :: [StackFrame]
                 }
 
@@ -96,7 +84,7 @@ emptyState = do
   mem <- liftIO HM.new
   globalScope <- newScopeFrame
   return EvalState {
-      nextMptr = 0,
+      nextMptr = Ptr 0,
       mem = mem,
       stack = [globalScope]
     }
@@ -140,44 +128,44 @@ popFrame = do
 --
 -- State methods: References
 --
-memIsFree :: ObjPtr -> InterpM Bool
+memIsFree :: Ptr -> InterpM Bool
 memIsFree ptr = do { mem <- gets mem; isNothing <$> liftIO (HM.lookup mem ptr) }
 
-memGetVal :: ObjPtr -> InterpM Val
+memGetVal :: Ptr -> InterpM Val
 memGetVal ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
   return $ val cell
 
-memGetRc :: ObjPtr -> InterpM Word
+memGetRc :: Ptr -> InterpM Word
 memGetRc ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
   return $ refcount cell
 
 -- malloc in Haskell XD
-memAlloc :: Val -> InterpM ObjPtr
+memAlloc :: Val -> InterpM Ptr
 memAlloc val = do
   mem <- gets mem
   ptr <- gets nextMptr
   when (ptr == maxBound) $ throwError OutOfMemory
-  modify $ \st -> st { nextMptr = nextMptr st + 1 }
+  modify $ \st -> st { nextMptr = Ptr $ getAddress ptr + 1 }
   liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
   return ptr
 
-memSet :: ObjPtr -> Val -> InterpM ()
+memSet :: Ptr -> Val -> InterpM ()
 memSet ptr val = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { val = val }
 
-rcIncr :: ObjPtr -> InterpM ()
+rcIncr :: Ptr -> InterpM ()
 rcIncr ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { refcount = refcount cell + 1 }
 
-rcDecr :: ObjPtr -> InterpM ()
+rcDecr :: Ptr -> InterpM ()
 rcDecr ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
@@ -189,10 +177,10 @@ rcDecr ptr = do
 --
 -- State methods: Symbol manipulation
 --
-lookupSymbol :: String -> InterpM ObjPtr
+lookupSymbol :: String -> InterpM Ptr
 lookupSymbol name = gets stack >>= doLookup Nothing
   where
-    doLookup :: Maybe ObjPtr -> [StackFrame] -> InterpM ObjPtr
+    doLookup :: Maybe Ptr -> [StackFrame] -> InterpM Ptr
     doLookup (Just ptr) _ = return ptr
     doLookup _ []         = throwError $ UndefinedSymbol name
     doLookup _ (ScopeFrame{symbols=syms}:frs) = do
@@ -200,7 +188,7 @@ lookupSymbol name = gets stack >>= doLookup Nothing
       doLookup l frs
     doLookup _ (_:frs) = doLookup Nothing frs
 
-putSymbol :: String -> ObjPtr -> InterpM ()
+putSymbol :: String -> Ptr -> InterpM ()
 putSymbol name ptr = do
   syms <- gets $ symbols . head . stack
 
@@ -231,7 +219,7 @@ allSymbols = do
       return $ names `S.union` set
     aggfn set _                           = return set
 
-    getNames :: MHashTable String ObjPtr -> IO (S.Set String)
+    getNames :: MHashTable String Ptr -> IO (S.Set String)
     getNames syms = do
       kvs <- HM.toList syms
       let keys = map fst kvs

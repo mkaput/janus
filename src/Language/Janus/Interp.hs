@@ -45,7 +45,7 @@ instance Evaluable EvalError where
 instance Evaluable Lvalue where
   eval (IndexLv v' idx') = iie "not implemented yet"
 
-  eval (Path p')         = iie "not implemented yet"
+  eval (Path name)       = evalSymbol name
 
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
