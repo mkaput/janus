@@ -89,8 +89,6 @@ toValD :: Double -> Val
 toValD = toVal
 
 
-
-
 --
 -- FromVal class
 --
