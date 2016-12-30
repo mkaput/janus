@@ -262,7 +262,7 @@ subst_stmt : lvalue ":=" expr ";"
 ## Items
 
 ```antlr
-item : fn_item | block_item
+item : fn_item
 ```
 
 ### Functions
@@ -280,7 +280,6 @@ statement, or `()` otherwise.
 
 ```antlr
 block      : "{" stmt* "}"
-block_item : block
 ```
 
 ## Lvalues
