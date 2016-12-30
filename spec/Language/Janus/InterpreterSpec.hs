@@ -114,6 +114,41 @@ spec = do
     it "\"a\" + 'a' == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral 'a') `shouldEval` toVal "aa"
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
+  describe "eval of reference" $ do
+    it "should fail for unknown variable" $
+      run (Path "a") `shouldReturn` Left (UndefinedSymbol "a")
+
+    it "eval should return reference to variable" . testInterpM $ do
+      ptr <- memAlloc JUnit
+      putSymbol "a" ptr
+      eval (Path "a") `shouldInterp` JRef (PtrRef ptr)
+
+    it "evalDeref should return variable value" . testInterpM $ do
+      ptr <- memAlloc JUnit
+      putSymbol "a" ptr
+      evalDeref (Path "a") `shouldInterp` JUnit
+
+    it "eval of string indexing should return reference to char" . testInterpM $ do
+      ptr <- memAlloc $ JStr "abc"
+      putSymbol "a" ptr
+      eval (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1)) `shouldInterp` JRef (IndexRef ptr (toValI 1))
+
+    it "evalDeref of string indexing should return indexed char" . testInterpM $ do
+      ptr <- memAlloc $ JStr "abc"
+      putSymbol "a" ptr
+      evalDeref (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1)) `shouldInterp` JChar 'b'
+
+    it "eval of indexing non-reference should fail" $
+      run (IndexLv (toLiteralI 1) (toLiteralI 1)) `shouldReturn` Left NonRefIndexing
+
+    it "nested indexing is not implemented" $
+      let
+        m = runInterpM $ do
+          ptr <- memAlloc $ JStr "abc"
+          putSymbol "a" ptr
+          eval (IndexLv (LvalueExpr (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1))) (toLiteralI 1))
+      in m `shouldReturn` Left (InternalError "nested index refs are not implemented yet")
+
 
   describe "valGetIdx" $ do
     it "valGetIdx \"abc\" 1 == 'b'" . testInterpM $
