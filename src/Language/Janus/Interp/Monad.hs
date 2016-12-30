@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards       #-}
 
 module Language.Janus.Interp.Monad (
   ObjPtr,
