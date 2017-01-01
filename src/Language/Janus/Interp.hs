@@ -360,6 +360,9 @@ instance Evaluable EvalError where
 instance Evaluable Program where
   eval (Program stmts) = eval (Block stmts)
 
+instance Evaluable Lvalue where
+  eval lv = evalRef lv >>= deref
+
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
 
@@ -369,9 +372,19 @@ instance Evaluable Expr where
 
   eval (CallExpr e' args') = iie "not implemented yet"
 
-  eval (PostfixIncExpr e') = iie "not implemented yet"
+  eval (PostfixIncExpr lv) = do
+    ref <- evalRef lv
+    val <- eval lv
+    newVal <- valIncr "a++" val
+    refset ref newVal
+    return val
 
-  eval (PostfixDecExpr e') = iie "not implemented yet"
+  eval (PostfixDecExpr lv) = do
+    ref <- evalRef lv
+    val <- eval lv
+    newVal <- valDecr "a--" val
+    refset ref newVal
+    return val
 
   eval (NotExpr e') = callOp1 "!x" [wrapOp1 not] e'
 
@@ -390,9 +403,17 @@ instance Evaluable Expr where
       wrapOp1 (negate :: Double -> Double)
     ] e'
 
-  eval (PrefixIncExpr e') = iie "not implemented yet"
+  eval (PrefixIncExpr lv) = do
+    ref <- evalRef lv
+    newVal <- eval lv >>= valIncr "++a"
+    refset ref newVal
+    return newVal
 
-  eval (PrefixDecExpr e') = iie "not implemented yet"
+  eval (PrefixDecExpr lv) = do
+    ref <- evalRef lv
+    newVal <- eval lv >>= valDecr "--a"
+    refset ref newVal
+    return newVal
 
   eval (ExpExpr a' b') = callOp2 "x ** n" [
       wrapOp2 ((^) :: Integer -> Integer -> Integer),
@@ -532,7 +553,7 @@ instance Evaluable Expr where
 
   eval (ReturnExpr e') = iie "not implemented yet"
 
-  eval (LvalueExpr lv) = evalRef lv >>= deref
+  eval (LvalueExpr lv) = eval lv
 
 instance Evaluable Block where
   eval (Block stmts) = do
@@ -698,3 +719,15 @@ callOp2 opName fs a' b' = do
       doCall ((f, sig):fs) a b triedSigs = case f a b of
         Just v  -> return v
         Nothing -> doCall fs a b (sig:triedSigs)
+
+valIncr :: String -> Val -> InterpM Val
+valIncr opName = callOp1 opName [
+    wrapOp1 ((+ 1) :: Integer -> Integer),
+    wrapOp1 ((+ 1.0) :: Double -> Double)
+  ]
+
+valDecr :: String -> Val -> InterpM Val
+valDecr opName = callOp1 opName [
+    wrapOp1 ((\x -> x - 1) :: Integer -> Integer),
+    wrapOp1 ((\x -> x - 1.0) :: Double -> Double)
+  ]

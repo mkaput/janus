@@ -253,15 +253,15 @@ data Expr = LiteralExpr Val
 
           | CallExpr Expr [Expr]
 
-          | PostfixIncExpr Expr
-          | PostfixDecExpr Expr
+          | PostfixIncExpr Lvalue
+          | PostfixDecExpr Lvalue
 
           | NotExpr Expr
           | BitNotExpr Expr
           | PlusExpr Expr
           | NegExpr Expr
-          | PrefixIncExpr Expr
-          | PrefixDecExpr Expr
+          | PrefixIncExpr Lvalue
+          | PrefixDecExpr Lvalue
 
           | ExpExpr Expr Expr
 
