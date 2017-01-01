@@ -132,6 +132,7 @@ data EvalError = OpCallTypeError {
                | IndexOutOfBounds
                | InternalError String
                | InvalidPointer Ptr
+               | ExpectedBool Val
                | ExpectedRef
                | OutOfMemory
                | UndefinedSymbol String
@@ -159,6 +160,8 @@ instance Show EvalError where
   show (InternalError msg) = "Internal error: " ++ msg
 
   show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
+
+  show (ExpectedBool val) = "expected boolean value, got " ++ show val
 
   show ExpectedRef = "expected reference expression"
 
@@ -511,7 +514,13 @@ instance Evaluable Expr where
       wrapOp2 ((||) :: Bool -> Bool -> Bool)
     ] a' b'
 
-  eval IfExpr{cond=c', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
+  eval IfExpr{cond=c', ifBranch=a', elseBranch=b'} = do
+    cv <- eval c'
+    c <- tryFromVal cv `unwrapM` ExpectedBool cv
+    if c then
+      eval a'
+    else
+      maybe (return JUnit) eval b'
 
   eval WhileExpr{cond=c', body=b'} = iie "not implemented yet"
 
