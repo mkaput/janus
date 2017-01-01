@@ -244,13 +244,13 @@ memIsFree ptr = do { mem <- gets mem; isNothing <$> liftIO (HM.lookup mem ptr) }
 memGetVal :: Ptr -> InterpM Val
 memGetVal ptr = do
   mem <- gets mem
-  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   return $ val cell
 
 memGetRc :: Ptr -> InterpM Word
 memGetRc ptr = do
   mem <- gets mem
-  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   return $ refcount cell
 
 -- malloc in Haskell XD
@@ -266,19 +266,19 @@ memAlloc val = do
 memSet :: Ptr -> Val -> InterpM ()
 memSet ptr val = do
   mem <- gets mem
-  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { val = val }
 
 rcIncr :: Ptr -> InterpM ()
 rcIncr ptr = do
   mem <- gets mem
-  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { refcount = refcount cell + 1 }
 
 rcDecr :: Ptr -> InterpM ()
 rcDecr ptr = do
   mem <- gets mem
-  cell <- liftIO (HM.lookup mem ptr) `throwIfNothing` InvalidPointer ptr
+  cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   case refcount cell - 1 of
       0  -> liftIO $ HM.delete mem ptr
       rc -> liftIO $ HM.insert mem ptr cell { refcount = rc }
@@ -561,7 +561,7 @@ instance Evaluable Stmt where
 
 class RefEvaluable a where
   evalRef :: a -> InterpM Ref
-  evalRef a = tryEvalRef a `throwIfNothing` ExpectedRef
+  evalRef a = tryEvalRef a `unwrapM'` ExpectedRef
 
   tryEvalRef :: a -> InterpM (Maybe Ref)
   tryEvalRef a = Just `fmap` evalRef a
@@ -598,9 +598,9 @@ instance RefEvaluable Expr where
 valGetIdx :: Val -> Val -> InterpM Val
 valGetIdx (JStr s) (JInt n)
   | n < 0 = throwError IndexOutOfBounds
-  | otherwise = return (
+  | otherwise = (
         listToMaybe . map (JChar . snd) . filter ((== n) . fst) $ zip [0..] s
-      ) `throwIfNothing` IndexOutOfBounds
+      ) `unwrapM` IndexOutOfBounds
 valGetIdx v n = throwError OpCallTypeError {
     opName = "a[i]",
     triedSigs = [[typeOf "", typeOf (undefined :: Integer)]],
@@ -632,8 +632,11 @@ type MHashTable k v = HM.CuckooHashTable k v
 iie :: String -> InterpM a
 iie = throwError . InternalError
 
-throwIfNothing :: InterpM (Maybe a) -> EvalError -> InterpM a
-throwIfNothing valM err = do
+unwrapM :: Maybe a -> EvalError -> InterpM a
+unwrapM val err = return val `unwrapM'` err
+
+unwrapM' :: InterpM (Maybe a) -> EvalError -> InterpM a
+unwrapM' valM err = do
   val' <- valM
   case val' of
     Nothing  -> throwError err
