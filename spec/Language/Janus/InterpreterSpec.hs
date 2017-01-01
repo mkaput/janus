@@ -151,6 +151,38 @@ spec = do
       evalRef (IndexLv "a" (toLiteralI 1)) `shouldInterp` IndexRef ptr (toValI 1)
 
 
+  describe "let decls" $ do
+    it "let a = 42; a == 42" . testInterpM $ do
+      eval (LetDecl "a" (toLiteralI 42))
+      eval (LvalueExpr (Path "a")) `shouldInterp` JInt 42
+
+    it "let a = 42; let b = a; a and b should point to the same memcell" . testInterpM $ do
+      eval (LetDecl "a" (toLiteralI 42))
+      rc <- lookupSymbol "a" >>= memGetRc
+      liftIO $ rc `shouldBe` 1
+
+      eval (LetDecl "b" (LvalueExpr (Path "a")))
+      ptrA <- lookupSymbol "a"
+      ptrB <- lookupSymbol "b"
+      liftIO $ ptrA `shouldBe` ptrB
+
+      rc <- lookupSymbol "a" >>= memGetRc
+      liftIO $ rc `shouldBe` 2
+
+    it "let a = 42; let b = (a); a and b should point to the same memcell" . testInterpM $ do
+      eval (LetDecl "a" (toLiteralI 42))
+      rc <- lookupSymbol "a" >>= memGetRc
+      liftIO $ rc `shouldBe` 1
+
+      eval (LetDecl "b" (ParenExpr (LvalueExpr (Path "a"))))
+      ptrA <- lookupSymbol "a"
+      ptrB <- lookupSymbol "b"
+      liftIO $ ptrA `shouldBe` ptrB
+
+      rc <- lookupSymbol "a" >>= memGetRc
+      liftIO $ rc `shouldBe` 2
+
+
   describe "valGetIdx" $ do
     it "valGetIdx \"abc\" 1 == 'b'" . testInterpM $
       valGetIdx (JStr "abc") (JInt 1) `shouldInterp` JChar 'b'
