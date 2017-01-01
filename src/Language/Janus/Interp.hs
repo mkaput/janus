@@ -15,6 +15,7 @@ module Language.Janus.Interp (
   refset,
 
   pushScope,
+  pushBlockFrame,
   popFrame,
 
   memIsFree,
@@ -84,6 +85,7 @@ data StackFrame = ScopeFrame {
                     -- TODO Implement this properly
                     func        :: Ptr
                   }
+                | BlockFrame
 
 newScopeFrame :: MonadIO m => m StackFrame
 newScopeFrame = do
@@ -207,9 +209,6 @@ refset (IndexRef ptr idx) newVal = do
 rawPushFrame :: StackFrame -> InterpM ()
 rawPushFrame sf = modify (\st -> st { stack = sf : stack st })
 
-pushScope :: InterpM ()
-pushScope = newScopeFrame >>= rawPushFrame
-
 rawPopFrame :: InterpM StackFrame
 rawPopFrame = do
   st <- get
@@ -225,6 +224,12 @@ popFrame = do
   case frame of
     ScopeFrame{symbols=syms} -> liftIO (HM.toList syms) >>= mapM_ (rcDecr . snd)
     _ -> return ()
+
+pushScope :: InterpM ()
+pushScope = newScopeFrame >>= rawPushFrame
+
+pushBlockFrame :: InterpM()
+pushBlockFrame = rawPushFrame BlockFrame
 
 
 -----------------------------------------------------------------------------
@@ -355,7 +360,7 @@ instance Evaluable Program where
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
 
-  eval (BlockExpr block') = iie "not implemented yet"
+  eval (BlockExpr block') = eval block'
 
   eval (ParenExpr e') = eval e'
 
@@ -521,7 +526,11 @@ instance Evaluable Expr where
   eval (LvalueExpr lv) = evalRef lv >>= deref
 
 instance Evaluable Block where
-  eval (Block stmts) = foldM (\_ stmt -> eval stmt) JUnit stmts
+  eval (Block stmts) = do
+    pushBlockFrame
+    result <- foldM (\_ stmt -> eval stmt) JUnit stmts
+    popFrame
+    return result
 
 instance Evaluable Stmt where
   eval (LetDecl name e') = do

@@ -151,8 +151,44 @@ spec = do
       evalRef (IndexLv "a" (toLiteralI 1)) `shouldInterp` IndexRef ptr (toValI 1)
 
 
-  describe "let decls" $ do
-    it "let a = 42; a == 42" . testInterpM $ do
+  describe "eval of blocks" $ do
+    it "{} should be ()" $
+      run (BlockExpr $ Block []) `shouldReturn` Right JUnit
+
+    it "{ 41; 42 } should be 42" $
+      run (BlockExpr $ Block [
+          ExprStmt $ toLiteralI 41,
+          ExprStmt $ toLiteralI 42
+        ]) `shouldReturn` Right (JInt 42)
+
+    it "{ let a = 42; a } should be 42" $
+      run (BlockExpr $ Block [
+          LetDecl "a" (toLiteralI 42),
+          ExprStmt . LvalueExpr $ Path "a"
+        ]) `shouldReturn` Right (JInt 42)
+
+    it "let a = 'a'; { let a = 42; a } should be 42" $
+      run (Program [
+          LetDecl "a" (toLiteral 'c'),
+          ExprStmt . BlockExpr $ Block [
+            LetDecl "a" (toLiteralI 42),
+            ExprStmt . LvalueExpr $ Path "a"
+          ]
+        ]) `shouldReturn` Right (JInt 42)
+
+    it "let a = 'c'; { let a = 42; a }; a should be 'c'" $
+      run (Program [
+          LetDecl "a" (toLiteral 'c'),
+          ExprStmt . BlockExpr $ Block [
+            LetDecl "a" (toLiteralI 42),
+            ExprStmt . LvalueExpr $ Path "a"
+          ],
+          ExprStmt . LvalueExpr $ Path "a"
+        ]) `shouldReturn` Right (JChar 'c')
+
+
+  describe "eval of let decls" $ do
+    it "let a = 42; a should be 42" . testInterpM $ do
       eval (LetDecl "a" (toLiteralI 42))
       eval (LvalueExpr (Path "a")) `shouldInterp` JInt 42
 
