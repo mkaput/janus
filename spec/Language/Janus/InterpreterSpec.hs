@@ -167,6 +167,15 @@ spec = do
         ) `shouldReturn` Right JUnit
 
 
+  describe "eval of while loop" $
+    it "works" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 5)
+      eval $ WhileExpr
+        (GtEqExpr (LvalueExpr $ Path "a") (toLiteralI 0))
+        (PostfixDecExpr (Path "a"))
+      evalVar "a" `shouldInterp` JInt (-1)
+
+
   describe "eval of LvalueExpr" $ do
     it "Path should return variable value" . testInterpM $ do
       ptr <- memAlloc JUnit
