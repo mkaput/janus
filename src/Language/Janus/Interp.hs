@@ -258,6 +258,13 @@ cleanLoopFrame = rawPopFrame >>= doClean
     doClean ScopeFrame{..} = rawPopFrame >>= doClean
     doClean _              = iie "dirty stack"
 
+cleanBlockFrame :: InterpM ()
+cleanBlockFrame = rawPopFrame >>= doClean
+  where
+    doClean BlockFrame     = return ()
+    doClean ScopeFrame{..} = rawPopFrame >>= doClean
+    doClean _              = iie "dirty stack"
+
 
 -----------------------------------------------------------------------------
 --
@@ -585,7 +592,7 @@ instance Evaluable Block where
   eval (Block stmts) = do
     pushBlockFrame
     result <- foldM (\_ stmt -> eval stmt) JUnit stmts
-    popFrame
+    cleanBlockFrame
     return result
 
 instance Evaluable Stmt where
