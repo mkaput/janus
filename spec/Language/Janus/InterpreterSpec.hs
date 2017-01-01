@@ -114,6 +114,37 @@ spec = do
     it "\"a\" + 'a' == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral 'a') `shouldEval` toVal "aa"
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
+
+  describe "eval of if expr" $ do
+    it "if True { 42 } else { 'c' } should be 42" $
+      run (IfExpr
+          (toLiteral True)
+          (toLiteralI 42)
+          (Just $ toLiteral 'c')
+        ) `shouldReturn` Right (JInt 42)
+
+    it "if False { 42 } else { 'c' } should be 'c'" $
+      run (IfExpr
+          (toLiteral False)
+          (toLiteralI 42)
+          (Just $ toLiteral 'c')
+        ) `shouldReturn` Right (JChar 'c')
+
+    it "if 42 ... should fail" $
+      run (IfExpr
+          (toLiteralI 42)
+          (toLiteralI 42)
+          Nothing
+        ) `shouldReturn` Left (ExpectedBool (JInt 42))
+
+    it "if False { 42 } else { 'c' } should be 'c'" $
+      run (IfExpr
+          (toLiteral False)
+          (toLiteralI 42)
+          Nothing
+        ) `shouldReturn` Right JUnit
+
+
   describe "eval of LvalueExpr" $ do
     it "Path should return variable value" . testInterpM $ do
       ptr <- memAlloc JUnit
@@ -124,6 +155,7 @@ spec = do
       ptr <- memAlloc $ JStr "abc"
       putSymbol "a" ptr
       eval (LvalueExpr (IndexLv "a" (toLiteralI 1))) `shouldInterp` JChar 'b'
+
 
   describe "eval of block" $ do
     it "should return last stmt's value" . testInterpM $

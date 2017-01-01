@@ -295,7 +295,7 @@ data Expr = LiteralExpr Val
           | IfExpr {
               cond       :: Expr,
               ifBranch   :: Expr,
-              elseBranch :: Expr
+              elseBranch :: Maybe Expr
             }
           | WhileExpr {
               cond :: Expr,
