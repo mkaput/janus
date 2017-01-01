@@ -130,7 +130,7 @@ data EvalError = OpCallTypeError {
                | IndexOutOfBounds
                | InternalError String
                | InvalidPointer Ptr
-               | NonRefIndexing
+               | ExpectedRef
                | OutOfMemory
                | UndefinedSymbol String
                deriving (Eq, Ord)
@@ -158,7 +158,7 @@ instance Show EvalError where
 
   show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
 
-  show NonRefIndexing = "tried to index non-reference value"
+  show ExpectedRef = "expected reference expression"
 
   show OutOfMemory = "out of memory"
 
@@ -506,9 +506,9 @@ instance Evaluable Expr where
       wrapOp2 ((||) :: Bool -> Bool -> Bool)
     ] a' b'
 
-  eval IfExpr{cond=cond', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
+  eval IfExpr{cond=c', ifBranch=a', elseBranch=b'} = iie "not implemented yet"
 
-  eval WhileExpr{cond=cond', body=body'} = iie "not implemented yet"
+  eval WhileExpr{cond=c', body=b'} = iie "not implemented yet"
 
   eval (LoopExpr e') = iie "not implemented yet"
 
@@ -524,13 +524,22 @@ instance Evaluable Block where
   eval (Block stmts) = foldM (\_ stmt -> eval stmt) JUnit stmts
 
 instance Evaluable Stmt where
-  eval (LetDecl name e')                 = iie "not implemented yet"
+  eval (LetDecl name e') = do
+    pushScope
+    ptr <- getPtr e'
+    putSymbol name ptr
+    return JUnit
+    where
+      getPtr x = tryEvalRef x >>= getPtr'
+
+      getPtr' (Just (PtrRef ptr)) = return ptr
+      getPtr' _                   = eval e' >>= memAlloc
 
   eval FnDecl{name=n',params=p',body=b'} = iie "not implemented yet"
 
-  eval (SubstStmt lv' e')                = iie "not implemented yet"
+  eval (SubstStmt lv' e') = iie "not implemented yet"
 
-  eval (ExprStmt e')                     = eval e'
+  eval (ExprStmt e')      = eval e'
 
 
 -----------------------------------------------------------------------------
@@ -541,6 +550,12 @@ instance Evaluable Stmt where
 
 class RefEvaluable a where
   evalRef :: a -> InterpM Ref
+  evalRef a = tryEvalRef a `throwIfNothing` ExpectedRef
+
+  tryEvalRef :: a -> InterpM (Maybe Ref)
+  tryEvalRef a = Just `fmap` evalRef a
+
+  {-# MINIMAL evalRef | tryEvalRef #-}
 
 instance RefEvaluable Ptr where
   evalRef = return . PtrRef
@@ -554,6 +569,13 @@ instance RefEvaluable Lvalue where
     ptr <- lookupSymbol name
     idx <- eval idx'
     return $ IndexRef ptr idx
+
+instance RefEvaluable Expr where
+  tryEvalRef (ParenExpr e')  = tryEvalRef e'
+
+  tryEvalRef (LvalueExpr lv) = tryEvalRef lv
+
+  tryEvalRef _               = return Nothing
 
 
 -----------------------------------------------------------------------------
