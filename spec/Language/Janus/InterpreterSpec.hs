@@ -115,6 +115,28 @@ spec = do
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
 
+  describe "eval of postfix/prefix increment/decrements" $ do
+    it "a++" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval (PostfixIncExpr (Path "a")) `shouldInterp` JInt 42
+      evalVar "a" `shouldInterp` JInt 43
+
+    it "a--" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval (PostfixDecExpr (Path "a")) `shouldInterp` JInt 42
+      evalVar "a" `shouldInterp` JInt 41
+
+    it "++a" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval (PrefixIncExpr (Path "a")) `shouldInterp` JInt 43
+      evalVar "a" `shouldInterp` JInt 43
+
+    it "--a" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval (PrefixDecExpr (Path "a")) `shouldInterp` JInt 41
+      evalVar "a" `shouldInterp` JInt 41
+
+
   describe "eval of if expr" $ do
     it "if True { 42 } else { 'c' } should be 42" $
       run (IfExpr
@@ -287,6 +309,9 @@ spec = do
       let m = runInterpM $ valSetIdx (JStr "") (JInt (-1)) (JChar 'x')
       in m `shouldReturn` Left IndexOutOfBounds
 
+
+evalVar :: String -> InterpM Val
+evalVar name = eval (LvalueExpr $ Path name)
 
 testInterpM :: InterpM a -> Expectation
 testInterpM m = do
