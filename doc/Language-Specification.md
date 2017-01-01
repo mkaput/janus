@@ -371,7 +371,7 @@ of the *if* block, or the *else* one. If the latter one was not
 provided, it evaluates to `()`, e.g.:
 
 ```rust
-let a = if false { 1234 } // a == ()
+let a = if False { 1234 } // a == ()
 ```
 
 ### While loops
