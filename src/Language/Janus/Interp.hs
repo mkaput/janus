@@ -535,18 +535,20 @@ instance Evaluable Block where
 instance Evaluable Stmt where
   eval (LetDecl name e') = do
     pushScope
-    ptr <- getPtr e'
+    ptr <- meanPtr e'
     putSymbol name ptr
     return JUnit
-    where
-      getPtr x = tryEvalRef x >>= getPtr'
-
-      getPtr' (Just (PtrRef ptr)) = return ptr
-      getPtr' _                   = eval e' >>= memAlloc
+    where meanPtr e' = tryEvalRef e' >>= \x -> case x of
+                         Just (PtrRef ptr) -> return ptr
+                         _                 -> eval e' >>= memAlloc
 
   eval FnDecl{name=n',params=p',body=b'} = iie "not implemented yet"
 
-  eval (SubstStmt lv' e') = iie "not implemented yet"
+  eval (SubstStmt lv' e') = do
+    ref <- evalRef lv'
+    val <- eval e'
+    refset ref val
+    return JUnit
 
   eval (ExprStmt e')      = eval e'
 

@@ -189,15 +189,15 @@ spec = do
 
   describe "eval of let decls" $ do
     it "let a = 42; a should be 42" . testInterpM $ do
-      eval (LetDecl "a" (toLiteralI 42))
-      eval (LvalueExpr (Path "a")) `shouldInterp` JInt 42
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval (LvalueExpr $ Path "a") `shouldInterp` JInt 42
 
     it "let a = 42; let b = a; a and b should point to the same memcell" . testInterpM $ do
-      eval (LetDecl "a" (toLiteralI 42))
+      eval $ LetDecl "a" (toLiteralI 42)
       rc <- lookupSymbol "a" >>= memGetRc
       liftIO $ rc `shouldBe` 1
 
-      eval (LetDecl "b" (LvalueExpr (Path "a")))
+      eval $ LetDecl "b" (LvalueExpr $ Path "a")
       ptrA <- lookupSymbol "a"
       ptrB <- lookupSymbol "b"
       liftIO $ ptrA `shouldBe` ptrB
@@ -206,11 +206,11 @@ spec = do
       liftIO $ rc `shouldBe` 2
 
     it "let a = 42; let b = (a); a and b should point to the same memcell" . testInterpM $ do
-      eval (LetDecl "a" (toLiteralI 42))
+      eval $ LetDecl "a" (toLiteralI 42)
       rc <- lookupSymbol "a" >>= memGetRc
       liftIO $ rc `shouldBe` 1
 
-      eval (LetDecl "b" (ParenExpr (LvalueExpr (Path "a"))))
+      eval $ LetDecl "b" (ParenExpr . LvalueExpr $ Path "a")
       ptrA <- lookupSymbol "a"
       ptrB <- lookupSymbol "b"
       liftIO $ ptrA `shouldBe` ptrB
@@ -218,6 +218,17 @@ spec = do
       rc <- lookupSymbol "a" >>= memGetRc
       liftIO $ rc `shouldBe` 2
 
+
+  describe "eval of subst stmts" $ do
+    it "let a = 42; a := 'c'; a should be 'c'" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 42)
+      eval $ SubstStmt (Path "a") (toLiteral 'c')
+      eval (LvalueExpr $ Path "a") `shouldInterp` JChar 'c'
+
+    it "let a = \"abc\"; a[1] = 'x'; a should be \"axc\"" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteral "abc")
+      eval $ SubstStmt (IndexLv "a" (toLiteralI 1)) (toLiteral 'x')
+      eval (LvalueExpr $ Path "a") `shouldInterp` JStr "axc"
 
   describe "valGetIdx" $ do
     it "valGetIdx \"abc\" 1 == 'b'" . testInterpM $
