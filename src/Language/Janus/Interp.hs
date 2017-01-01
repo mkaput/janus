@@ -1,11 +1,21 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.Interp (
   EvalState,
   emptyState,
 
-  EvalError(..),
+  EvalError (
+    OpCallTypeError,
+    IndexOutOfBounds,
+    InternalError,
+    InvalidPointer,
+    ExpectedBool,
+    ExpectedRef,
+    OutOfMemory,
+    UndefinedSymbol
+  ),
 
   InterpM,
   runInterpM,
@@ -86,6 +96,7 @@ data StackFrame = ScopeFrame {
                     func        :: Ptr
                   }
                 | BlockFrame
+                | LoopFrame
 
 newScopeFrame :: MonadIO m => m StackFrame
 newScopeFrame = do
@@ -136,6 +147,9 @@ data EvalError = OpCallTypeError {
                | ExpectedRef
                | OutOfMemory
                | UndefinedSymbol String
+
+               | LoopBreak_
+               | LoopContinue_
                deriving (Eq, Ord)
 
 instance Show EvalError where
@@ -231,8 +245,18 @@ popFrame = do
 pushScope :: InterpM ()
 pushScope = newScopeFrame >>= rawPushFrame
 
-pushBlockFrame :: InterpM()
+pushBlockFrame :: InterpM ()
 pushBlockFrame = rawPushFrame BlockFrame
+
+pushLoopFrame :: InterpM ()
+pushLoopFrame = rawPushFrame LoopFrame
+
+cleanLoopFrame :: InterpM ()
+cleanLoopFrame = rawPopFrame >>= doClean
+  where
+    doClean LoopFrame      = return ()
+    doClean ScopeFrame{..} = rawPopFrame >>= doClean
+    doClean _              = iie "dirty stack"
 
 
 -----------------------------------------------------------------------------
@@ -536,16 +560,18 @@ instance Evaluable Expr where
     ] a' b'
 
   eval IfExpr{cond=c', ifBranch=a', elseBranch=b'} = do
-    cv <- eval c'
-    c <- tryFromVal cv `unwrapM` ExpectedBool cv
+    c <- evalBool c'
     if c then
       eval a'
     else
       maybe (return JUnit) eval b'
 
-  eval WhileExpr{cond=c', body=b'} = iie "not implemented yet"
+  eval WhileExpr{cond=c', body=b'} = doLoop $ do
+    c <- evalBool c'
+    unless c $ throwError LoopBreak_
+    eval b'
 
-  eval (LoopExpr e') = iie "not implemented yet"
+  eval (LoopExpr e') = doLoop (eval e')
 
   eval BreakExpr = iie "not implemented yet"
 
@@ -672,6 +698,9 @@ unwrapM' valM err = do
     Nothing  -> throwError err
     Just val -> return val
 
+evalBool :: Evaluable a => a -> InterpM Bool
+evalBool e' = do { ev <- eval e'; tryFromVal ev `unwrapM` ExpectedBool ev }
+
 wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
@@ -719,6 +748,19 @@ callOp2 opName fs a' b' = do
       doCall ((f, sig):fs) a b triedSigs = case f a b of
         Just v  -> return v
         Nothing -> doCall fs a b (sig:triedSigs)
+
+doLoop :: InterpM Val -> InterpM Val
+doLoop f = (forever loopBody >> return JUnit) `catchError` handleLoopBreak
+  where
+    loopBody = do { pushLoopFrame; f; cleanLoopFrame } `catchError` handleLoopContinue
+
+    handleLoopContinue :: EvalError -> InterpM ()
+    handleLoopContinue LoopContinue_ = return ()
+    handleLoopContinue ex            = throwError ex
+
+    handleLoopBreak :: EvalError -> InterpM Val
+    handleLoopBreak LoopBreak_ = return JUnit
+    handleLoopBreak ex         = throwError ex
 
 valIncr :: String -> Val -> InterpM Val
 valIncr opName = callOp1 opName [
