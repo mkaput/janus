@@ -114,40 +114,16 @@ spec = do
     it "\"a\" + 'a' == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral 'a') `shouldEval` toVal "aa"
     it "\"a\" + \"a\" == \"aa\"" $ AddExpr (toLiteral "a") (toLiteral "a") `shouldEval` toVal "aa"
 
-  describe "eval of reference" $ do
-    it "should fail for unknown variable" $
-      run (Path "a") `shouldReturn` Left (UndefinedSymbol "a")
-
-    it "eval should return reference to variable" . testInterpM $ do
+  describe "eval of LvalueExpr" $ do
+    it "Path should return variable value" . testInterpM $ do
       ptr <- memAlloc JUnit
       putSymbol "a" ptr
-      eval (Path "a") `shouldInterp` JRef (PtrRef ptr)
+      eval (LvalueExpr (Path "a")) `shouldInterp` JUnit
 
-    it "evalDeref should return variable value" . testInterpM $ do
-      ptr <- memAlloc JUnit
-      putSymbol "a" ptr
-      evalDeref (Path "a") `shouldInterp` JUnit
-
-    it "eval of string indexing should return reference to char" . testInterpM $ do
+    it "string indexing should return indexed char" . testInterpM $ do
       ptr <- memAlloc $ JStr "abc"
       putSymbol "a" ptr
-      eval (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1)) `shouldInterp` JRef (IndexRef ptr (toValI 1))
-
-    it "evalDeref of string indexing should return indexed char" . testInterpM $ do
-      ptr <- memAlloc $ JStr "abc"
-      putSymbol "a" ptr
-      evalDeref (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1)) `shouldInterp` JChar 'b'
-
-    it "eval of indexing non-reference should fail" $
-      run (IndexLv (toLiteralI 1) (toLiteralI 1)) `shouldReturn` Left NonRefIndexing
-
-    it "nested indexing is not implemented" $
-      let
-        m = runInterpM $ do
-          ptr <- memAlloc $ JStr "abc"
-          putSymbol "a" ptr
-          eval (IndexLv (LvalueExpr (IndexLv (LvalueExpr (Path "a")) (toLiteralI 1))) (toLiteralI 1))
-      in m `shouldReturn` Left (InternalError "nested index refs are not implemented yet")
+      eval (LvalueExpr (IndexLv "a" (toLiteralI 1))) `shouldInterp` JChar 'b'
 
   describe "eval of block" $ do
     it "should return last stmt's value" . testInterpM $
@@ -158,6 +134,21 @@ spec = do
 
     it "should return unit for empty block" . testInterpM $
       eval (Block []) `shouldInterp` JUnit
+
+
+  describe "evalRef of lvalue" $ do
+    it "should fail for unknown variable" $
+      run (LvalueExpr (Path "a")) `shouldReturn` Left (UndefinedSymbol "a")
+
+    it "should return reference to variable" . testInterpM $ do
+      ptr <- memAlloc JUnit
+      putSymbol "a" ptr
+      evalRef (Path "a") `shouldInterp` PtrRef ptr
+
+    it "string indexing should return reference to char" . testInterpM $ do
+      ptr <- memAlloc $ JStr "abc"
+      putSymbol "a" ptr
+      evalRef (IndexLv "a" (toLiteralI 1)) `shouldInterp` IndexRef ptr (toValI 1)
 
 
   describe "valGetIdx" $ do
