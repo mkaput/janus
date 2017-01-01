@@ -12,7 +12,7 @@ module Language.Janus.Interp (
   run,
 
   deref,
-  refSet,
+  refset,
 
   pushScope,
   popFrame,
@@ -32,7 +32,9 @@ module Language.Janus.Interp (
 
   Evaluable,
   eval,
-  evalDeref,
+
+  RefEvaluable,
+  evalRef,
 
   valGetIdx,
   valSetIdx
@@ -188,12 +190,12 @@ deref :: Ref -> InterpM Val
 deref (PtrRef ptr)       = memGetVal ptr
 deref (IndexRef ptr idx) = memGetVal ptr >>= (`valGetIdx` idx)
 
-refSet :: Ref -> Val -> InterpM ()
-refSet (PtrRef ptr) newVal       = memSet ptr newVal
-refSet (IndexRef ptr idx) newVal = do
-  currObj <- memGetVal ptr
-  newObj <- valSetIdx currObj idx newVal
-  memSet ptr newObj
+refset :: Ref -> Val -> InterpM ()
+refset (PtrRef ptr) newVal       = memSet ptr newVal
+refset (IndexRef ptr idx) newVal = do
+  a <- memGetVal ptr
+  newVal <- valSetIdx a idx newVal
+  memSet ptr newVal
 
 
 -----------------------------------------------------------------------------
@@ -341,13 +343,6 @@ allSymbols = do
 class Evaluable a where
   eval :: a -> InterpM Val
 
-evalDeref :: (Evaluable a) => a -> InterpM Val
-evalDeref a' = do
-  a <- eval a'
-  case a of
-    JRef ref -> deref ref
-    a        -> return a
-
 instance Evaluable Val where
   eval = return
 
@@ -356,17 +351,6 @@ instance Evaluable EvalError where
 
 instance Evaluable Program where
   eval (Program stmts) = eval (Block stmts)
-
-instance Evaluable Lvalue where
-  eval (IndexLv v' idx') = do
-    v <- eval v'
-    idx <- eval idx'
-    case v of
-      JRef (PtrRef ptr) -> return . JRef $ IndexRef ptr idx
-      JRef _            -> iie "nested index refs are not implemented yet"
-      _                 -> throwError NonRefIndexing
-
-  eval (Path name)       = (JRef . PtrRef) `fmap` lookupSymbol name
 
 instance Evaluable Expr where
   eval (LiteralExpr a') = eval a'
@@ -534,7 +518,7 @@ instance Evaluable Expr where
 
   eval (ReturnExpr e') = iie "not implemented yet"
 
-  eval (LvalueExpr lv) = eval lv
+  eval (LvalueExpr lv) = evalRef lv >>= deref
 
 instance Evaluable Block where
   eval (Block stmts) = foldM (\_ stmt -> eval stmt) JUnit stmts
@@ -551,7 +535,30 @@ instance Evaluable Stmt where
 
 -----------------------------------------------------------------------------
 --
--- Val index accessors
+-- RefEvaluable
+--
+-----------------------------------------------------------------------------
+
+class RefEvaluable a where
+  evalRef :: a -> InterpM Ref
+
+instance RefEvaluable Ptr where
+  evalRef = return . PtrRef
+
+instance RefEvaluable Ref where
+  evalRef = return
+
+instance RefEvaluable Lvalue where
+  evalRef (Path name) = lookupSymbol name >>= evalRef
+  evalRef (IndexLv name idx') = do
+    ptr <- lookupSymbol name
+    idx <- eval idx'
+    return $ IndexRef ptr idx
+
+
+-----------------------------------------------------------------------------
+--
+-- Index accessors
 --
 -----------------------------------------------------------------------------
 

@@ -288,7 +288,7 @@ Lvalue is a reference to something in memory (either variable or item).
 
 ```antlr
 lvalue   : index_lv | path
-index_lv : expr "[" expr "]"
+index_lv : path "[" expr "]"
 path     : ident
 ```
 

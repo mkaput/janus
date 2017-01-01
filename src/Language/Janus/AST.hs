@@ -90,7 +90,6 @@ data Val = JUnit
          | JDouble Double
          | JChar Char
          | JStr String
-         | JRef Ref
          deriving (Show, Eq, Ord, Data, Typeable)
 
 showVal :: Val -> String
@@ -237,7 +236,7 @@ toLiteralD = LiteralExpr . toValD
 -----------------------------------------------------------------------------
 
 data Lvalue = Path String
-            | IndexLv Expr Expr
+            | IndexLv String Expr
             deriving (Show, Eq)
 
 
