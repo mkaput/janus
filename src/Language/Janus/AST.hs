@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Language.Janus.AST (
@@ -36,13 +37,16 @@ module Language.Janus.AST (
   Stmt(..)
 ) where
 
-import           Data.Data     (Data, toConstr)
-import           Data.Maybe    (fromMaybe)
-import           Data.Typeable (TypeRep, Typeable, typeOf)
-import           GHC.Float     (double2Float, float2Double)
+import           Data.Data             (Data, toConstr)
+import           Data.Maybe            (fromMaybe)
+import           Data.Typeable         (TypeRep, Typeable, typeOf)
+import           GHC.Float             (double2Float, float2Double)
 
-import           Data.Hashable (Hashable, hash, hashWithSalt)
+import           Data.Hashable         (Hashable, hash, hashWithSalt)
 
+-- BEWARE!!! Stylish Haskell hates {-# SOURCE #-} pragma and removes it
+-- Check out: https://github.com/jaspervdj/stylish-haskell/pull/143
+import {-# SOURCE #-} Language.Janus.Interp (InterpM)
 
 newtype Program = Program [Stmt]
 
@@ -90,6 +94,7 @@ data Val = JUnit
          | JDouble Double
          | JChar Char
          | JStr String
+         | JItem Item
          deriving (Show, Eq, Ord)
 
 showVal :: Val -> String
@@ -99,6 +104,7 @@ showVal (JInt x)    = show x
 showVal (JDouble x) = show x
 showVal (JChar x)   = show x
 showVal (JStr x)    = show x
+showVal (JItem x)   = show x
 
 haskellTypeRep :: Val -> TypeRep
 haskellTypeRep JUnit       = typeOf ()
@@ -107,6 +113,7 @@ haskellTypeRep (JInt a)    = typeOf a
 haskellTypeRep (JDouble a) = typeOf a
 haskellTypeRep (JChar a)   = typeOf a
 haskellTypeRep (JStr a)    = typeOf a
+haskellTypeRep (JItem a)   = typeOf a
 
 
 -----------------------------------------------------------------------------
@@ -322,3 +329,30 @@ data Stmt = LetDecl String Expr
           | SubstStmt Lvalue Expr
           | ExprStmt Expr
           deriving (Show, Eq)
+
+-----------------------------------------------------------------------------
+--
+-- Items
+--
+-----------------------------------------------------------------------------
+
+data Item = Func {
+              name   :: String,
+              params :: [String],
+              body   :: Block
+            }
+          | NativeFunc {
+              name       :: String,
+              paramNames :: String,
+              func       :: [Val] -> InterpM Val
+            }
+
+instance Show Item where
+  show Func{name=name, ..}       = "<<func " ++ name ++ ">>"
+  show NativeFunc{name=name, ..} = "<<native func " ++ name ++ ">>"
+
+instance Eq Item where
+  (==) = error "items are not comparable"
+
+instance Ord Item where
+  compare = error "items are not comparable"
