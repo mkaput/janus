@@ -34,7 +34,8 @@ module Language.Janus.AST (
   Lvalue(..),
   Expr(..),
   Block(..),
-  Stmt(..)
+  Stmt(..),
+  Item(..)
 ) where
 
 import           Data.Data             (Data, toConstr)
@@ -321,14 +322,11 @@ newtype Block = Block [Stmt]
 
 
 data Stmt = LetDecl String Expr
-          | FnDecl {
-              name   :: String,
-              params :: [String],
-              body   :: Block
-            }
+          | FnDecl String [String] Block
           | SubstStmt Lvalue Expr
           | ExprStmt Expr
           deriving (Show, Eq)
+
 
 -----------------------------------------------------------------------------
 --
@@ -336,23 +334,27 @@ data Stmt = LetDecl String Expr
 --
 -----------------------------------------------------------------------------
 
-data Item = Func {
-              name   :: String,
-              params :: [String],
-              body   :: Block
-            }
-          | NativeFunc {
-              name       :: String,
-              paramNames :: String,
-              func       :: [Val] -> InterpM Val
-            }
+data Item = Func String [String] Block
+          | NativeFunc String [String] ([Val] -> InterpM Val)
 
 instance Show Item where
-  show Func{name=name, ..}       = "<<func " ++ name ++ ">>"
-  show NativeFunc{name=name, ..} = "<<native func " ++ name ++ ">>"
+  show (Func n p _)       = showFunc "func" n p
+  show (NativeFunc n p _) = showFunc "native func" n p
 
 instance Eq Item where
   (==) = error "items are not comparable"
 
 instance Ord Item where
   compare = error "items are not comparable"
+
+
+-----------------------------------------------------------------------------
+--
+-- Utils
+--
+-----------------------------------------------------------------------------
+
+showFunc k n p = "<<" ++ show k
+              ++ " " ++ show n
+              ++ "(" ++ (foldl1 (\a b -> a ++ ", " ++ b) . fmap show $ p)
+              ++ ")>>"

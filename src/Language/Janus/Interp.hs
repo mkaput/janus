@@ -88,11 +88,10 @@ data MemCell = MemCell {
 -----------------------------------------------------------------------------
 
 data StackFrame = ScopeFrame {
-                    symbols     :: MHashTable String Ptr
+                    symbols :: MHashTable String Ptr
                   }
                 | CallFrame {
-                    -- TODO Implement this properly
-                    func        :: Ptr
+                    item :: Item
                   }
                 | BlockFrame
                 | LoopFrame
@@ -101,8 +100,6 @@ newScopeFrame :: MonadIO m => m StackFrame
 newScopeFrame = do
   symbols <- liftIO HM.new
   return ScopeFrame { symbols = symbols }
-
--- TODO newCallFrame
 
 
 -----------------------------------------------------------------------------
@@ -139,16 +136,19 @@ data EvalError = OpCallTypeError {
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
                 }
+               | ItemCallError Item EvalError
                | IndexOutOfBounds
                | InternalError String
                | InvalidPointer Ptr
                | ExpectedBool Val
                | ExpectedRef
+               | NotCallable Val
                | OutOfMemory
                | UndefinedSymbol String
 
                | LoopBreak_
                | LoopContinue_
+               | FuncReturn_ Val
                deriving (Eq, Ord)
 
 instance Show EvalError where
@@ -168,15 +168,19 @@ instance Show EvalError where
         in "(" ++ joinArgTypes args ++ ") -> " ++ show ret
       joinArgTypes = foldl1 (\a b -> a ++ ", " ++ b) . fmap show
 
+  show (ItemCallError item cause) = "error calling " ++ show item ++ ": \n" ++ showIndented cause
+
   show IndexOutOfBounds = "index out of bounds"
 
   show (InternalError msg) = "Internal error: " ++ msg
 
   show (InvalidPointer ptr) = printf "Invalid pointer: 0x%08x" (getAddress ptr)
 
-  show (ExpectedBool val) = "expected boolean value, got " ++ show val
+  show (ExpectedBool val) = "expected boolean value, got " ++ showVal val
 
   show ExpectedRef = "expected reference expression"
+
+  show (NotCallable val) = showVal val ++ " is not callable"
 
   show OutOfMemory = "out of memory"
 
@@ -243,6 +247,9 @@ popFrame = do
 
 pushScope :: InterpM ()
 pushScope = newScopeFrame >>= rawPushFrame
+
+pushCallFrame :: Item -> InterpM ()
+pushCallFrame = rawPushFrame . CallFrame
 
 pushBlockFrame :: InterpM ()
 pushBlockFrame = rawPushFrame BlockFrame
@@ -336,7 +343,7 @@ lookupVar name = gets stack >>= doLookup Nothing
 
 putVar :: String -> Ptr -> InterpM ()
 putVar name ptr = do
-  syms <- gets $ symbols . head . stack
+  syms <- gets $ symbols . head . filterScopes . stack
 
   rcIncr ptr
 
@@ -347,6 +354,10 @@ putVar name ptr = do
     _                -> return ()
 
   liftIO $ HM.insert syms name ptr
+  where
+    filterScopes = filter $ \frm -> case frm of
+      ScopeFrame{..} -> True
+      _              -> False
 
 evalVal :: String -> InterpM Val
 evalVal name = lookupVar name >>= memGetVal
@@ -400,7 +411,10 @@ instance Evaluable Expr where
 
   eval (ParenExpr e') = eval e'
 
-  eval (CallExpr e' args') = iie "not implemented yet"
+  eval (CallExpr e' args') = do
+    item <- eval e'
+    args <- mapM eval args'
+    item `call` args
 
   eval (PostfixIncExpr lv) = do
     ref <- evalRef lv
@@ -583,7 +597,7 @@ instance Evaluable Expr where
 
   eval ContinueExpr = throwError LoopContinue_
 
-  eval (ReturnExpr e') = iie "not implemented yet"
+  eval (ReturnExpr e') = eval e' >>= throwError . FuncReturn_
 
   eval (LvalueExpr lv) = eval lv
 
@@ -604,7 +618,9 @@ instance Evaluable Stmt where
                          Just (PtrRef ptr) -> return ptr
                          _                 -> eval e' >>= malloc
 
-  eval FnDecl{name=n',params=p',body=b'} = iie "not implemented yet"
+  eval (FnDecl n p b) = do
+    malloc (JItem $ Func n p b) >>= putVar n
+    return JUnit
 
   eval (SubstStmt lv' e') = do
     ref <- evalRef lv'
@@ -649,6 +665,40 @@ instance RefEvaluable Expr where
   tryEvalRef (LvalueExpr lv) = tryEvalRef lv
 
   tryEvalRef _               = return Nothing
+
+
+-----------------------------------------------------------------------------
+--
+-- Utility funcitons
+--
+-----------------------------------------------------------------------------
+
+class Callable a where
+  call :: a -> [Val] -> InterpM Val
+
+instance Callable Val where
+  call (JItem item) args = item `call` args
+
+  call v _               = throwError $ NotCallable v
+
+instance Callable Item where
+  call item@(Func n p b') args = do
+    pushCallFrame item
+    pushScope
+
+    let vars = zip p (args ++ repeat JUnit)
+    forM_ vars $ \(vname, vval) -> malloc vval >>= putVar vname
+
+    result <- eval b' `catchError` \err -> case err of
+      FuncReturn_ result -> return result
+      err                -> throwError $ ItemCallError item err
+
+    popFrame
+    popFrame
+
+    return result
+
+  call item@(NativeFunc _ _ f) args = f args `catchError` (throwError . ItemCallError item)
 
 
 -----------------------------------------------------------------------------
@@ -798,3 +848,6 @@ valDecr opName = callOp1 opName [
     wrapOp1 ((\x -> x - 1) :: Integer -> Integer),
     wrapOp1 ((\x -> x - 1.0) :: Double -> Double)
   ]
+
+showIndented :: Show a => a -> String
+showIndented = unlines . map ("  " ++) . lines . show
