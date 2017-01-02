@@ -167,13 +167,36 @@ spec = do
         ) `shouldReturn` Right JUnit
 
 
-  describe "eval of while loop" $
-    it "works" . testInterpM $ do
+  describe "eval of loops" $ do
+    it "while loop works" . testInterpM $ do
       eval $ LetDecl "a" (toLiteralI 5)
       eval $ WhileExpr
         (GtEqExpr (LvalueExpr $ Path "a") (toLiteralI 0))
         (PostfixDecExpr (Path "a"))
       evalVar "a" `shouldInterp` JInt (-1)
+
+    it "break works" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 5)
+      eval $ WhileExpr
+        (GtEqExpr (LvalueExpr $ Path "a") (toLiteralI 0))
+        (BlockExpr $ Block [ExprStmt BreakExpr, ExprStmt . PostfixDecExpr $ Path "a"])
+      evalVar "a" `shouldInterp` JInt 5
+
+    it "continue works" . testInterpM $ do
+      eval $ LetDecl "a" (toLiteralI 1)
+      eval $ LetDecl "i" (toLiteralI 0)
+      eval $ LoopExpr
+        (BlockExpr $ Block [
+            ExprStmt . PostfixIncExpr $ Path "i",
+            ExprStmt IfExpr {
+              cond = LtExpr (LvalueExpr $ Path "i") (toLiteralI 4),
+              ifBranch = ContinueExpr,
+              elseBranch = Nothing
+            },
+            ExprStmt . PostfixIncExpr $ Path "a",
+            ExprStmt BreakExpr
+          ])
+      evalVar "a" `shouldInterp` JInt 2
 
 
   describe "eval of LvalueExpr" $ do
