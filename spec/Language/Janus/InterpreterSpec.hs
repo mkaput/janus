@@ -342,6 +342,72 @@ spec = do
       in m `shouldReturn` Left IndexOutOfBounds
 
 
+  describe "functions" $ do
+    it "constant function" $ run (Program [
+        FnDecl "foo" ["x"] $ Block [
+            ExprStmt . ReturnExpr . LvalueExpr $ Path "x"
+          ],
+        ExprStmt $ CallExpr (LvalueExpr $ Path "foo") [toLiteralI 42]
+      ]) `shouldReturn` Right (JInt 42)
+
+    it "linear function" $ run (Program [
+        FnDecl "foo" ["x"] $ Block [
+            ExprStmt . ReturnExpr $ MulExpr (LvalueExpr $ Path "x") (toLiteralI 2)
+          ],
+        ExprStmt $ CallExpr (LvalueExpr $ Path "foo") [toLiteralI 42]
+      ]) `shouldReturn` Right (JInt 84)
+
+    it "factorial" $ run (Program [
+        FnDecl "factorial" ["x"] $ Block [
+            ExprStmt . ReturnExpr $ IfExpr {
+              cond = LtEqExpr (LvalueExpr $ Path "x") (toLiteralI 1),
+              ifBranch = toLiteralI 1,
+              elseBranch = Just $ MulExpr
+                (CallExpr (LvalueExpr $ Path "factorial") [SubExpr (LvalueExpr $ Path "x") (toLiteralI 1)])
+                (LvalueExpr $ Path "x")
+            }
+          ],
+        ExprStmt $ CallExpr (LvalueExpr $ Path "factorial") [toLiteralI 5]
+      ]) `shouldReturn` Right (JInt 120)
+
+    it "fibonacci" $ run (Program [
+        FnDecl "fibonacci" ["x"] $ Block [
+            ExprStmt IfExpr {
+              cond = LtEqExpr (LvalueExpr $ Path "x") (toLiteralI 0),
+              ifBranch = ReturnExpr $ toLiteralI 0,
+              elseBranch = Nothing
+            },
+            ExprStmt IfExpr {
+              cond = LtEqExpr (LvalueExpr $ Path "x") (toLiteralI 1),
+              ifBranch = ReturnExpr $ toLiteralI 1,
+              elseBranch = Nothing
+            },
+            ExprStmt $ AddExpr
+              (CallExpr (LvalueExpr $ Path "fibonacci") [SubExpr (LvalueExpr $ Path "x") (toLiteralI 2)])
+              (CallExpr (LvalueExpr $ Path "fibonacci") [SubExpr (LvalueExpr $ Path "x") (toLiteralI 1)])
+          ],
+        ExprStmt $ CallExpr (LvalueExpr $ Path "fibonacci") [toLiteralI 6]
+      ]) `shouldReturn` Right (JInt 8)
+
+    it "mutually recursive functions" $ run (Program [
+        FnDecl "is_even" ["x"] $ Block [
+            ExprStmt . ReturnExpr $ IfExpr {
+              cond = LtEqExpr (LvalueExpr $ Path "x") (toLiteralI 0),
+              ifBranch = toLiteral True,
+              elseBranch = Just $ CallExpr (LvalueExpr $ Path "is_odd") [SubExpr (LvalueExpr $ Path "x") (toLiteralI 1)]
+            }
+          ],
+        FnDecl "is_odd" ["x"] $ Block [
+            ExprStmt . ReturnExpr $ IfExpr {
+              cond = LtEqExpr (LvalueExpr $ Path "x") (toLiteralI 0),
+              ifBranch = toLiteral False,
+              elseBranch = Just $ CallExpr (LvalueExpr $ Path "is_even") [SubExpr (LvalueExpr $ Path "x") (toLiteralI 1)]
+            }
+          ],
+        ExprStmt $ CallExpr (LvalueExpr $ Path "is_even") [toLiteralI 11]
+      ]) `shouldReturn` Right (JBool False)
+
+
 evalVar :: String -> InterpM Val
 evalVar name = eval (LvalueExpr $ Path name)
 
