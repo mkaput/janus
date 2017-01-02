@@ -19,7 +19,7 @@ main = hspec spec
 spec = do
   describe "GC" $ do
     it "works" . testInterpM $ do
-      ptr <- memAlloc (JInt 42)
+      ptr <- malloc (JInt 42)
 
       liftIO $ ptr `shouldBe` Ptr 0
       memIsFree ptr `shouldInterp` False
@@ -40,29 +40,29 @@ spec = do
 
   describe "symbol manipulating" $
     it "works" . testInterpM $ do
-      ptrA <- memAlloc JUnit
-      putSymbol "a" ptrA
-      evalSymbol "a" `shouldInterp` JUnit
+      ptrA <- malloc JUnit
+      putVar "a" ptrA
+      evalVar "a" `shouldInterp` JUnit
 
-      ptrB <- memAlloc $ JInt 42
-      putSymbol "a" ptrB
+      ptrB <- malloc $ JInt 42
+      putVar "a" ptrB
       memIsFree ptrA `shouldInterp` True
       memIsFree ptrB `shouldInterp` False
-      evalSymbol "a" `shouldInterp` JInt 42
+      evalVar "a" `shouldInterp` JInt 42
 
 
-  describe "allSymbols" $ do
+  describe "allVars" $ do
     it "works" . testInterpM $ do
-      ptr <- memAlloc JUnit
-      putSymbol "a" ptr
-      putSymbol "b" ptr
+      ptr <- malloc JUnit
+      putVar "a" ptr
+      putVar "b" ptr
       pushScope
-      putSymbol "c" ptr
-      putSymbol "d" ptr
-      (sort <$> allSymbols) `shouldInterp` ["a", "b", "c", "d"]
+      putVar "c" ptr
+      putVar "d" ptr
+      (sort <$> allVars) `shouldInterp` ["a", "b", "c", "d"]
 
     it "returns [] for empty state" . testInterpM $
-      allSymbols `shouldInterp` []
+      allVars `shouldInterp` []
 
 
   describe "eval of Val" $ do
@@ -201,13 +201,13 @@ spec = do
 
   describe "eval of LvalueExpr" $ do
     it "Path should return variable value" . testInterpM $ do
-      ptr <- memAlloc JUnit
-      putSymbol "a" ptr
+      ptr <- malloc JUnit
+      putVar "a" ptr
       eval (LvalueExpr (Path "a")) `shouldInterp` JUnit
 
     it "string indexing should return indexed char" . testInterpM $ do
-      ptr <- memAlloc $ JStr "abc"
-      putSymbol "a" ptr
+      ptr <- malloc $ JStr "abc"
+      putVar "a" ptr
       eval (LvalueExpr (IndexLv "a" (toLiteralI 1))) `shouldInterp` JChar 'b'
 
 
@@ -227,13 +227,13 @@ spec = do
       run (LvalueExpr (Path "a")) `shouldReturn` Left (UndefinedSymbol "a")
 
     it "should return reference to variable" . testInterpM $ do
-      ptr <- memAlloc JUnit
-      putSymbol "a" ptr
+      ptr <- malloc JUnit
+      putVar "a" ptr
       evalRef (Path "a") `shouldInterp` PtrRef ptr
 
     it "string indexing should return reference to char" . testInterpM $ do
-      ptr <- memAlloc $ JStr "abc"
-      putSymbol "a" ptr
+      ptr <- malloc $ JStr "abc"
+      putVar "a" ptr
       evalRef (IndexLv "a" (toLiteralI 1)) `shouldInterp` IndexRef ptr (toValI 1)
 
 
@@ -280,28 +280,28 @@ spec = do
 
     it "let a = 42; let b = a; a and b should point to the same memcell" . testInterpM $ do
       eval $ LetDecl "a" (toLiteralI 42)
-      rc <- lookupSymbol "a" >>= memGetRc
+      rc <- lookupVar "a" >>= memGetRc
       liftIO $ rc `shouldBe` 1
 
       eval $ LetDecl "b" (LvalueExpr $ Path "a")
-      ptrA <- lookupSymbol "a"
-      ptrB <- lookupSymbol "b"
+      ptrA <- lookupVar "a"
+      ptrB <- lookupVar "b"
       liftIO $ ptrA `shouldBe` ptrB
 
-      rc <- lookupSymbol "a" >>= memGetRc
+      rc <- lookupVar "a" >>= memGetRc
       liftIO $ rc `shouldBe` 2
 
     it "let a = 42; let b = (a); a and b should point to the same memcell" . testInterpM $ do
       eval $ LetDecl "a" (toLiteralI 42)
-      rc <- lookupSymbol "a" >>= memGetRc
+      rc <- lookupVar "a" >>= memGetRc
       liftIO $ rc `shouldBe` 1
 
       eval $ LetDecl "b" (ParenExpr . LvalueExpr $ Path "a")
-      ptrA <- lookupSymbol "a"
-      ptrB <- lookupSymbol "b"
+      ptrA <- lookupVar "a"
+      ptrB <- lookupVar "b"
       liftIO $ ptrA `shouldBe` ptrB
 
-      rc <- lookupSymbol "a" >>= memGetRc
+      rc <- lookupVar "a" >>= memGetRc
       liftIO $ rc `shouldBe` 2
 
 

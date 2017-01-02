@@ -25,21 +25,20 @@ module Language.Janus.Interp (
   refset,
 
   pushScope,
-  pushBlockFrame,
   popFrame,
 
   memIsFree,
   memGetVal,
   memGetRc,
-  memAlloc,
-  memSet,
+  malloc,
+  memset,
   rcIncr,
   rcDecr,
 
-  lookupSymbol,
-  putSymbol,
-  evalSymbol,
-  allSymbols,
+  lookupVar,
+  putVar,
+  evalVal,
+  allVars,
 
   Evaluable,
   eval,
@@ -210,11 +209,11 @@ deref (PtrRef ptr)       = memGetVal ptr
 deref (IndexRef ptr idx) = memGetVal ptr >>= (`valGetIdx` idx)
 
 refset :: Ref -> Val -> InterpM ()
-refset (PtrRef ptr) newVal       = memSet ptr newVal
+refset (PtrRef ptr) newVal       = memset ptr newVal
 refset (IndexRef ptr idx) newVal = do
   a <- memGetVal ptr
   newVal <- valSetIdx a idx newVal
-  memSet ptr newVal
+  memset ptr newVal
 
 
 -----------------------------------------------------------------------------
@@ -288,8 +287,8 @@ memGetRc ptr = do
   return $ refcount cell
 
 -- malloc in Haskell XD
-memAlloc :: Val -> InterpM Ptr
-memAlloc val = do
+malloc :: Val -> InterpM Ptr
+malloc val = do
   mem <- gets mem
   ptr <- gets nextMptr
   when (ptr == maxBound) $ throwError OutOfMemory
@@ -297,8 +296,8 @@ memAlloc val = do
   liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
   return ptr
 
-memSet :: Ptr -> Val -> InterpM ()
-memSet ptr val = do
+memset :: Ptr -> Val -> InterpM ()
+memset ptr val = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { val = val }
@@ -324,8 +323,8 @@ rcDecr ptr = do
 --
 -----------------------------------------------------------------------------
 
-lookupSymbol :: String -> InterpM Ptr
-lookupSymbol name = gets stack >>= doLookup Nothing
+lookupVar :: String -> InterpM Ptr
+lookupVar name = gets stack >>= doLookup Nothing
   where
     doLookup :: Maybe Ptr -> [StackFrame] -> InterpM Ptr
     doLookup (Just ptr) _ = return ptr
@@ -335,8 +334,8 @@ lookupSymbol name = gets stack >>= doLookup Nothing
       doLookup l frs
     doLookup _ (_:frs) = doLookup Nothing frs
 
-putSymbol :: String -> Ptr -> InterpM ()
-putSymbol name ptr = do
+putVar :: String -> Ptr -> InterpM ()
+putVar name ptr = do
   syms <- gets $ symbols . head . stack
 
   rcIncr ptr
@@ -349,11 +348,11 @@ putSymbol name ptr = do
 
   liftIO $ HM.insert syms name ptr
 
-evalSymbol :: String -> InterpM Val
-evalSymbol name = lookupSymbol name >>= memGetVal
+evalVal :: String -> InterpM Val
+evalVal name = lookupVar name >>= memGetVal
 
-allSymbols :: InterpM [String]
-allSymbols = do
+allVars :: InterpM [String]
+allVars = do
   stack <- gets stack
   symbolSet <- liftIO
     . foldM aggfn S.empty
@@ -599,11 +598,11 @@ instance Evaluable Stmt where
   eval (LetDecl name e') = do
     pushScope
     ptr <- meanPtr e'
-    putSymbol name ptr
+    putVar name ptr
     return JUnit
     where meanPtr e' = tryEvalRef e' >>= \x -> case x of
                          Just (PtrRef ptr) -> return ptr
-                         _                 -> eval e' >>= memAlloc
+                         _                 -> eval e' >>= malloc
 
   eval FnDecl{name=n',params=p',body=b'} = iie "not implemented yet"
 
@@ -638,9 +637,9 @@ instance RefEvaluable Ref where
   evalRef = return
 
 instance RefEvaluable Lvalue where
-  evalRef (Path name) = lookupSymbol name >>= evalRef
+  evalRef (Path name) = lookupVar name >>= evalRef
   evalRef (IndexLv name idx') = do
-    ptr <- lookupSymbol name
+    ptr <- lookupVar name
     idx <- eval idx'
     return $ IndexRef ptr idx
 
