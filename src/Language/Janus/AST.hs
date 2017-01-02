@@ -75,7 +75,7 @@ getAddress (Ptr p) = p
 
 data Ref = PtrRef Ptr
          | IndexRef Ptr Val
-         deriving (Show, Eq, Ord, Data, Typeable)
+         deriving (Show, Eq, Ord)
 
 
 -----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ data Val = JUnit
          | JDouble Double
          | JChar Char
          | JStr String
-         deriving (Show, Eq, Ord, Data, Typeable)
+         deriving (Show, Eq, Ord)
 
 showVal :: Val -> String
 showVal JUnit       = "()"
@@ -115,7 +115,7 @@ haskellTypeRep (JStr a)    = typeOf a
 --
 -----------------------------------------------------------------------------
 
-class Typeable a => ToVal a where
+class ToVal a where
   toVal :: a -> Val
 
 instance ToVal Val where
@@ -161,13 +161,11 @@ toValD = toVal
 --
 -----------------------------------------------------------------------------
 
-class Typeable a => FromVal a where
+class FromVal a where
   fromVal :: Val -> a
-  fromVal a = fromMaybe (
-      error $
-        "Failed to convert Janus value of type " ++ show (toConstr a)
-        ++ " to Haskell value of type " ++ show (typeOf (undefined :: a))
-    ) (tryFromVal a)
+  fromVal a = fromMaybe
+    (error "Failed to convert Janus value to Haskell value")
+    (tryFromVal a)
 
   tryFromVal :: Val -> Maybe a
   tryFromVal = Just . fromVal

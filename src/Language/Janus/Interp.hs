@@ -707,7 +707,7 @@ unwrapM' valM err = do
 evalBool :: Evaluable a => a -> InterpM Bool
 evalBool e' = do { ev <- eval e'; tryFromVal ev `unwrapM` ExpectedBool ev }
 
-wrapOp1 :: forall a b. (FromVal a, ToVal b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
+wrapOp1 :: forall a b. (FromVal a, ToVal b, Typeable a, Typeable b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
     [typeOf (undefined :: a), typeOf (undefined :: b)]
@@ -728,7 +728,7 @@ callOp1 opName fs a' = do
         Just v  -> return v
         Nothing -> doCall fs a (sig:triedSigs)
 
-wrapOp2 :: forall a b c. (FromVal a, FromVal b, ToVal c)
+wrapOp2 :: forall a b c. (FromVal a, FromVal b, ToVal c, Typeable a, Typeable b, Typeable c)
   => (a -> b -> c) -> (Val -> Val -> Maybe Val, [TypeRep])
 wrapOp2 f = (
     \a' b' -> do
