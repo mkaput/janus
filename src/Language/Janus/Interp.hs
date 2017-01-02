@@ -224,7 +224,7 @@ refset (IndexRef ptr idx) newVal = do
 -----------------------------------------------------------------------------
 
 rawPushFrame :: StackFrame -> InterpM ()
-rawPushFrame sf = modify (\st -> st { stack = sf : stack st })
+rawPushFrame sf = modify' (\st -> st { stack = sf : stack st })
 
 rawPopFrame :: InterpM StackFrame
 rawPopFrame = do
@@ -293,7 +293,7 @@ memAlloc val = do
   mem <- gets mem
   ptr <- gets nextMptr
   when (ptr == maxBound) $ throwError OutOfMemory
-  modify $ \st -> st { nextMptr = Ptr $ getAddress ptr + 1 }
+  modify' $ \st -> st { nextMptr = Ptr $ getAddress ptr + 1 }
   liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
   return ptr
 
