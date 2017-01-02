@@ -707,18 +707,27 @@ unwrapM' valM err = do
 evalBool :: Evaluable a => a -> InterpM Bool
 evalBool e' = do { ev <- eval e'; tryFromVal ev `unwrapM` ExpectedBool ev }
 
-wrapOp1 :: forall a b. (FromVal a, ToVal b, Typeable a, Typeable b) => (a -> b) -> (Val -> Maybe Val, [TypeRep])
+wrapOp1 :: forall a b. (FromVal a, ToVal b, Typeable a, Typeable b)
+        => (a -> b)
+        -> (Val -> Maybe Val, [TypeRep])
 wrapOp1 f = (
     fmap (toVal . f) . tryFromVal,
     [typeOf (undefined :: a), typeOf (undefined :: b)]
   )
 
-callOp1 :: Evaluable a => String -> [(Val -> Maybe Val, [TypeRep])] -> a -> InterpM Val
+callOp1 :: Evaluable a
+        => String
+        -> [(Val -> Maybe Val, [TypeRep])]
+        -> a
+        -> InterpM Val
 callOp1 opName fs a' = do
   a <- eval a'
   doCall fs a []
     where
-      doCall :: [(Val -> Maybe Val, [TypeRep])] -> Val -> [[TypeRep]] -> InterpM Val
+      doCall :: [(Val -> Maybe Val, [TypeRep])]
+             -> Val
+             -> [[TypeRep]]
+             -> InterpM Val
       doCall [] a triedSigs = throwError OpCallTypeError {
           opName = opName,
           triedSigs = triedSigs,
@@ -728,8 +737,10 @@ callOp1 opName fs a' = do
         Just v  -> return v
         Nothing -> doCall fs a (sig:triedSigs)
 
-wrapOp2 :: forall a b c. (FromVal a, FromVal b, ToVal c, Typeable a, Typeable b, Typeable c)
-  => (a -> b -> c) -> (Val -> Val -> Maybe Val, [TypeRep])
+wrapOp2 :: forall a b c. (FromVal a, FromVal b, ToVal c,
+                          Typeable a, Typeable b, Typeable c)
+        => (a -> b -> c)
+        -> (Val -> Val -> Maybe Val, [TypeRep])
 wrapOp2 f = (
     \a' b' -> do
       a <- tryFromVal a'
@@ -739,13 +750,21 @@ wrapOp2 f = (
   )
 
 callOp2 :: (Evaluable a, Evaluable b)
-  => String -> [(Val -> Val -> Maybe Val, [TypeRep])] -> a -> b -> InterpM Val
+        => String
+        -> [(Val -> Val -> Maybe Val, [TypeRep])]
+        -> a
+        -> b
+        -> InterpM Val
 callOp2 opName fs a' b' = do
   a <- eval a'
   b <- eval b'
   doCall fs a b []
     where
-      doCall :: [(Val -> Val -> Maybe Val, [TypeRep])] -> Val -> Val -> [[TypeRep]] -> InterpM Val
+      doCall :: [(Val -> Val -> Maybe Val, [TypeRep])]
+             -> Val
+             -> Val
+             -> [[TypeRep]]
+             -> InterpM Val
       doCall [] a b triedSigs = throwError OpCallTypeError {
           opName = opName,
           triedSigs = triedSigs,
