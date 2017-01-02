@@ -580,9 +580,9 @@ instance Evaluable Expr where
 
   eval (LoopExpr e') = doLoop (eval e')
 
-  eval BreakExpr = iie "not implemented yet"
+  eval BreakExpr = throwError LoopBreak_
 
-  eval ContinueExpr = iie "not implemented yet"
+  eval ContinueExpr = throwError LoopContinue_
 
   eval (ReturnExpr e') = iie "not implemented yet"
 
@@ -666,7 +666,7 @@ valGetIdx (JStr s) (JInt n)
       ) `unwrapM` IndexOutOfBounds
 valGetIdx v n = throwError OpCallTypeError {
     opName = "a[i]",
-    triedSigs = [[typeOf "", typeOf (undefined :: Integer)]],
+    triedSigs = [[typeOf "", typeOf (undefined :: Integer), typeOf 'a']],
     givenSig = [haskellTypeRep v, haskellTypeRep n]
   }
 
@@ -678,7 +678,7 @@ valSetIdx (JStr s) (JInt n) (JChar c)
     return . JStr . map (\(i, ch) -> if i == n then c else ch) $ zip [0..] s
 valSetIdx v n x = throwError OpCallTypeError {
     opName = "a[i] = x",
-    triedSigs = [[typeOf "", typeOf (undefined :: Integer), typeOf 'a']],
+    triedSigs = [[typeOf "", typeOf (undefined :: Integer), typeOf 'a', typeOf ()]],
     givenSig = [haskellTypeRep v, haskellTypeRep n, haskellTypeRep x]
   }
 
