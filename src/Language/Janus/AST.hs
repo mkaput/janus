@@ -153,6 +153,9 @@ instance ToVal Char where
 instance ToVal String where
   toVal = JStr
 
+instance ToVal Item where
+  toVal = JItem
+
 toValI :: Integral a => a -> Val
 toValI = toVal . toInteger
 
@@ -214,6 +217,10 @@ instance FromVal Char where
 instance FromVal String where
   tryFromVal (JStr s) = Just s
   tryFromVal _        = Nothing
+
+instance FromVal Item where
+  tryFromVal (JItem item) = Just item
+  tryFromVal _            = Nothing
 
 
 -----------------------------------------------------------------------------
@@ -338,8 +345,8 @@ data Item = Func String [String] Block
           | NativeFunc String [String] ([Val] -> InterpM Val)
 
 instance Show Item where
-  show (Func n p _)       = showFunc "func" n p
-  show (NativeFunc n p _) = showFunc "native func" n p
+  show (Func n p _)       = showFunc "Func" n p
+  show (NativeFunc n p _) = showFunc "NativeFunc" n p
 
 instance Eq Item where
   (==) = error "items are not comparable"
@@ -354,7 +361,7 @@ instance Ord Item where
 --
 -----------------------------------------------------------------------------
 
-showFunc k n p = "<<" ++ show k
-              ++ " " ++ show n
-              ++ "(" ++ (foldl1 (\a b -> a ++ ", " ++ b) . fmap show $ p)
-              ++ ")>>"
+showFunc k n p = "<" ++ k
+              ++ " " ++ n
+              ++ "(" ++ foldl1 (\ a b -> a ++ ", " ++ b) p
+              ++ ")>"

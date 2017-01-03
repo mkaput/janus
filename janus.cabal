@@ -17,7 +17,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Language.Janus,
                        Language.Janus.AST,
-                       Language.Janus.Interp
+                       Language.Janus.Interp,
+                       Language.Janus.Stdlib
   other-modules:       Language.Janus.Parser,
                        Language.Janus.Parser.Expressions,
                        Language.Janus.Parser.Lexer,
@@ -51,7 +52,9 @@ test-suite janus-spec
   hs-source-dirs:      spec
   main-is:             Spec.hs
   other-modules:       Language.Janus.ASTSpec,
-                       Language.Janus.InterpreterSpec
+                       Language.Janus.InterpreterSpec,
+                       Language.Janus.StdlibSpec,
+                       Language.Janus.TestUtil
   build-depends:       base,
                        janus,
                        HUnit,
