@@ -8,13 +8,17 @@ module Language.Janus.Interp (
 
   EvalError (
     OpCallTypeError,
+    ItemCallError,
     IndexOutOfBounds,
     InternalError,
     InvalidPointer,
     ExpectedBool,
     ExpectedRef,
+    NotCallable,
     OutOfMemory,
-    UndefinedSymbol
+    UndefinedSymbol,
+
+    CustomError
   ),
 
   InterpM,
@@ -47,7 +51,7 @@ module Language.Janus.Interp (
   evalRef,
 
   valGetIdx,
-  valSetIdx
+  valSetIdx,
 ) where
 
 import           Control.Monad
@@ -146,6 +150,8 @@ data EvalError = OpCallTypeError {
                | OutOfMemory
                | UndefinedSymbol String
 
+               | CustomError String
+
                | LoopBreak_
                | LoopContinue_
                | FuncReturn_ Val
@@ -185,6 +191,8 @@ instance Show EvalError where
   show OutOfMemory = "out of memory"
 
   show (UndefinedSymbol name) = "undefined symbol " ++ name
+
+  show (CustomError msg) = msg
 
 
 -----------------------------------------------------------------------------
@@ -734,28 +742,9 @@ valSetIdx v n x = throwError OpCallTypeError {
 
 -----------------------------------------------------------------------------
 --
--- Utility funcitons
+-- Function wrapping
 --
 -----------------------------------------------------------------------------
-
--- TODO Find out which implementation is the fastest
-type MHashTable k v = HM.CuckooHashTable k v
-
-iie :: String -> InterpM a
-iie = throwError . InternalError
-
-unwrapM :: Maybe a -> EvalError -> InterpM a
-unwrapM val err = return val `unwrapM'` err
-
-unwrapM' :: InterpM (Maybe a) -> EvalError -> InterpM a
-unwrapM' valM err = do
-  val' <- valM
-  case val' of
-    Nothing  -> throwError err
-    Just val -> return val
-
-evalBool :: Evaluable a => a -> InterpM Bool
-evalBool e' = do { ev <- eval e'; tryFromVal ev `unwrapM` ExpectedBool ev }
 
 wrapOp1 :: forall a b. (FromVal a, ToVal b, Typeable a, Typeable b)
         => (a -> b)
@@ -823,6 +812,32 @@ callOp2 opName fs a' b' = do
       doCall ((f, sig):fs) a b triedSigs = case f a b of
         Just v  -> return v
         Nothing -> doCall fs a b (sig:triedSigs)
+
+
+-----------------------------------------------------------------------------
+--
+-- Utility funcitons
+--
+-----------------------------------------------------------------------------
+
+-- TODO Find out which implementation is the fastest
+type MHashTable k v = HM.CuckooHashTable k v
+
+iie :: String -> InterpM a
+iie = throwError . InternalError
+
+unwrapM :: Maybe a -> EvalError -> InterpM a
+unwrapM val err = return val `unwrapM'` err
+
+unwrapM' :: InterpM (Maybe a) -> EvalError -> InterpM a
+unwrapM' valM err = do
+  val' <- valM
+  case val' of
+    Nothing  -> throwError err
+    Just val -> return val
+
+evalBool :: Evaluable a => a -> InterpM Bool
+evalBool e' = do { ev <- eval e'; tryFromVal ev `unwrapM` ExpectedBool ev }
 
 doLoop :: InterpM Val -> InterpM Val
 doLoop f = (forever loopBody >> return JUnit) `catchError` handleLoopBreak
