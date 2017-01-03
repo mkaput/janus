@@ -237,7 +237,7 @@ program : whitespace? stmt*
 ## Statements
 
 ```antlr
-stmt      : decl_stmt | expr_stmt | ";"
+stmt      : decl_stmt | subst_stmt | expr_stmt | ";"
 decl_stmt : let_decl ";" | item ";"?
 expr_stmt : expr ";"
 ```
@@ -248,10 +248,21 @@ expr_stmt : expr ";"
 let_decl : "let" ident "=" expr
 ```
 
+Variable binding introduces new subscope with new variable. This prevents
+leaking variables before their declaration and helps programmer prevent
+unexpected variable value changes (though the latter can be mitigated with
+[Substitution statements](#substitution-statements)).
+
+### Substitution statements
+
+```antlr
+subst_stmt : lvalue ":=" expr ";"
+```
+
 ## Items
 
 ```antlr
-item : fn_item | block_item
+item : fn_item
 ```
 
 ### Functions
@@ -269,7 +280,16 @@ statement, or `()` otherwise.
 
 ```antlr
 block      : "{" stmt* "}"
-block_item : block
+```
+
+## Lvalues
+
+Lvalue is a reference to something in memory (either variable or item).
+
+```antlr
+lvalue   : index_lv | path
+index_lv : path "[" expr "]"
+path     : ident
 ```
 
 ## Expressions
@@ -284,9 +304,11 @@ expr : literal_expr
      | break_expr
      | continue_expr
      | return_expr
+     | lvalue_expr
 
 literal_expr : literal
 block_expr   : block
+lvalue_expr  : lvalue
 ```
 
 ### Operators
@@ -298,7 +320,7 @@ following precedence table:
 | Precedence | Operator          | Associativity | Operation |
 |------------|-------------------|---------------|---|
 | 20         | `(...)`           | n/a           | Grouping |
-| 19         | `... [ ... ]`     | left-to-right | Indexed member access |
+| 19         | -                 | -             | - |
 | 18         | `... ( ... )`     | left-to-right | Function call |
 | 17         | `... ++`          | n/a           | Postfix increment |
 |            | `... --`          | n/a           | Postfix decrement |
@@ -349,7 +371,7 @@ of the *if* block, or the *else* one. If the latter one was not
 provided, it evaluates to `()`, e.g.:
 
 ```rust
-let a = if false { 1234 } // a == ()
+let a = if False { 1234 } // a == ()
 ```
 
 ### While loops

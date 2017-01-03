@@ -1,32 +1,102 @@
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
-module Language.Janus.AST where
+module Language.Janus.AST (
+  Program(..),
 
-import           Data.Data     (Data, toConstr)
-import           Data.Maybe    (fromMaybe)
-import           Data.Typeable (TypeRep, Typeable, typeOf)
-import           GHC.Float     (double2Float, float2Double)
+  Ptr(..),
+  getAddress,
 
+  Ref(..),
 
+  Val(..),
+  showVal,
+  haskellTypeRep,
+
+  ToVal,
+  toVal,
+  toValI,
+  toValF,
+  toValD,
+
+  FromVal,
+  fromVal,
+  tryFromVal,
+
+  toLiteral,
+  toLiteralI,
+  toLiteralF,
+  toLiteralD,
+
+  Lvalue(..),
+  Expr(..),
+  Block(..),
+  Stmt(..),
+  Item(..)
+) where
+
+import           Data.Data             (Data, toConstr)
+import           Data.Maybe            (fromMaybe)
+import           Data.Typeable         (TypeRep, Typeable, typeOf)
+import           GHC.Float             (double2Float, float2Double)
+
+import           Data.Hashable         (Hashable, hash, hashWithSalt)
+
+-- BEWARE!!! Stylish Haskell hates {-# SOURCE #-} pragma and removes it
+-- Check out: https://github.com/jaspervdj/stylish-haskell/pull/143
+import {-# SOURCE #-} Language.Janus.Interp (InterpM)
+
+newtype Program = Program [Stmt]
+
+-----------------------------------------------------------------------------
 --
--- Tokens
+-- Pointer
 --
-newtype Ident = Ident String
-              deriving (Show, Eq, Ord)
+-----------------------------------------------------------------------------
+
+newtype Ptr = Ptr Word
+            deriving (Eq, Ord, Show, Data, Typeable)
+
+instance Bounded Ptr where
+  minBound = Ptr minBound
+  maxBound = Ptr maxBound
+
+instance Hashable Ptr where
+  hashWithSalt s (Ptr p) = hashWithSalt s p
+  hash = hash . getAddress
+
+getAddress :: Ptr -> Word
+getAddress (Ptr p) = p
 
 
+-----------------------------------------------------------------------------
+--
+-- Ref
+--
+-----------------------------------------------------------------------------
+
+data Ref = PtrRef Ptr
+         | IndexRef Ptr Val
+         deriving (Show, Eq, Ord)
+
+
+-----------------------------------------------------------------------------
 --
 -- Val
 --
+-----------------------------------------------------------------------------
+
 data Val = JUnit
          | JBool Bool
          | JInt Integer
          | JDouble Double
          | JChar Char
          | JStr String
-         deriving (Show, Eq, Ord, Data, Typeable)
+         | JItem Item
+         deriving (Show, Eq, Ord)
 
 showVal :: Val -> String
 showVal JUnit       = "()"
@@ -35,6 +105,7 @@ showVal (JInt x)    = show x
 showVal (JDouble x) = show x
 showVal (JChar x)   = show x
 showVal (JStr x)    = show x
+showVal (JItem x)   = show x
 
 haskellTypeRep :: Val -> TypeRep
 haskellTypeRep JUnit       = typeOf ()
@@ -43,13 +114,20 @@ haskellTypeRep (JInt a)    = typeOf a
 haskellTypeRep (JDouble a) = typeOf a
 haskellTypeRep (JChar a)   = typeOf a
 haskellTypeRep (JStr a)    = typeOf a
+haskellTypeRep (JItem a)   = typeOf a
 
 
+-----------------------------------------------------------------------------
 --
--- ToVal class
+-- ToVal
 --
-class Typeable a => ToVal a where
+-----------------------------------------------------------------------------
+
+class ToVal a where
   toVal :: a -> Val
+
+instance ToVal Val where
+  toVal = id
 
 instance ToVal () where
   toVal _ = JUnit
@@ -75,8 +153,8 @@ instance ToVal Char where
 instance ToVal String where
   toVal = JStr
 
-toLiteral :: ToVal a => a -> Expr
-toLiteral = LiteralExpr . toVal
+instance ToVal Item where
+  toVal = JItem
 
 toValI :: Integral a => a -> Val
 toValI = toVal . toInteger
@@ -87,28 +165,26 @@ toValF = toVal . float2Double
 toValD :: Double -> Val
 toValD = toVal
 
-toLiteralI :: Integral a => a -> Expr
-toLiteralI = LiteralExpr . toValI
 
-toLiteralF :: Float -> Expr
-toLiteralF = LiteralExpr . toValF
-
-toLiteralD :: Double -> Expr
-toLiteralD = LiteralExpr . toValD
-
-
+-----------------------------------------------------------------------------
 --
--- FromVal class
+-- FromVal
 --
-class Typeable a => FromVal a where
+-----------------------------------------------------------------------------
+
+class FromVal a where
   fromVal :: Val -> a
-  fromVal a = fromMaybe (
-      error $
-        "Failed to convert Janus value of type " ++ show (toConstr a)
-        ++ " to Haskell value of type " ++ show (typeOf (undefined :: a))
-    ) (tryFromVal a)
+  fromVal a = fromMaybe
+    (error "Failed to convert Janus value to Haskell value")
+    (tryFromVal a)
 
   tryFromVal :: Val -> Maybe a
+  tryFromVal = Just . fromVal
+
+  {-# MINIMAL fromVal | tryFromVal #-}
+
+instance FromVal Val where
+  fromVal = id
 
 instance FromVal () where
   tryFromVal JUnit = Just ()
@@ -142,27 +218,63 @@ instance FromVal String where
   tryFromVal (JStr s) = Just s
   tryFromVal _        = Nothing
 
+instance FromVal Item where
+  tryFromVal (JItem item) = Just item
+  tryFromVal _            = Nothing
 
+
+-----------------------------------------------------------------------------
+--
+-- toLiteral
+--
+-----------------------------------------------------------------------------
+
+toLiteral :: ToVal a => a -> Expr
+toLiteral = LiteralExpr . toVal
+
+toLiteralI :: Integral a => a -> Expr
+toLiteralI = LiteralExpr . toValI
+
+toLiteralF :: Float -> Expr
+toLiteralF = LiteralExpr . toValF
+
+toLiteralD :: Double -> Expr
+toLiteralD = LiteralExpr . toValD
+
+
+-----------------------------------------------------------------------------
+--
+-- Lvalues
+--
+-----------------------------------------------------------------------------
+
+data Lvalue = Path String
+            | IndexLv String Expr
+            deriving (Show, Eq)
+
+
+-----------------------------------------------------------------------------
 --
 -- Expressions & statements
 --
+-----------------------------------------------------------------------------
+
 data Expr = LiteralExpr Val
           | BlockExpr Block
 
           | ParenExpr Expr
 
-          | IndexExpr Expr Expr
           | CallExpr Expr [Expr]
 
-          | PostfixIncExpr Expr
-          | PostfixDecExpr Expr
+          | PostfixIncExpr Lvalue
+          | PostfixDecExpr Lvalue
 
           | NotExpr Expr
           | BitNotExpr Expr
           | PlusExpr Expr
           | NegExpr Expr
-          | PrefixIncExpr Expr
-          | PrefixDecExpr Expr
+          | PrefixIncExpr Lvalue
+          | PrefixDecExpr Lvalue
 
           | ExpExpr Expr Expr
 
@@ -194,39 +306,62 @@ data Expr = LiteralExpr Val
           | OrExpr Expr Expr
 
           | IfExpr {
-              ifCond     :: Expr,
+              cond       :: Expr,
               ifBranch   :: Expr,
-              elseBranch :: Expr
+              elseBranch :: Maybe Expr
             }
           | WhileExpr {
-              whileCond :: Expr,
-              whileBody :: Expr
+              cond :: Expr,
+              body :: Expr
             }
           | LoopExpr Expr
 
           | BreakExpr
           | ContinueExpr
           | ReturnExpr Expr
+
+          | LvalueExpr Lvalue
           deriving (Show, Eq)
-
-
-data LetDecl = LetDecl Ident Expr
-             deriving (Show, Eq)
-
-
-data FnDecl = FnDecl {
-    fnName   :: Ident,
-    fnParams :: [Ident],
-    fnBody   :: Block
-  }
-  deriving (Show, Eq)
 
 
 newtype Block = Block [Stmt]
               deriving (Show, Eq)
 
 
-data Stmt = LetDeclStmt LetDecl
-          | FnDeclStmt FnDecl
+data Stmt = LetDecl String Expr
+          | FnDecl String [String] Block
+          | SubstStmt Lvalue Expr
           | ExprStmt Expr
           deriving (Show, Eq)
+
+
+-----------------------------------------------------------------------------
+--
+-- Items
+--
+-----------------------------------------------------------------------------
+
+data Item = Func String [String] Block
+          | NativeFunc String [String] ([Val] -> InterpM Val)
+
+instance Show Item where
+  show (Func n p _)       = showFunc "Func" n p
+  show (NativeFunc n p _) = showFunc "NativeFunc" n p
+
+instance Eq Item where
+  (==) = error "items are not comparable"
+
+instance Ord Item where
+  compare = error "items are not comparable"
+
+
+-----------------------------------------------------------------------------
+--
+-- Utils
+--
+-----------------------------------------------------------------------------
+
+showFunc k n p = "<" ++ k
+              ++ " " ++ n
+              ++ "(" ++ foldl1 (\ a b -> a ++ ", " ++ b) p
+              ++ ")>"
