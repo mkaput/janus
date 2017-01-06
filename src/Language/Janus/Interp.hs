@@ -4,7 +4,6 @@
 
 module Language.Janus.Interp (
   EvalState,
-  emptyState,
 
   EvalError (
     OpCallTypeError,
@@ -44,11 +43,9 @@ module Language.Janus.Interp (
   evalVal,
   allVars,
 
-  Evaluable,
-  eval,
-
-  RefEvaluable,
-  evalRef,
+  Evaluable(eval),
+  RefEvaluable(evalRef, tryEvalRef),
+  Callable(call),
 
   valGetIdx,
   valSetIdx,
