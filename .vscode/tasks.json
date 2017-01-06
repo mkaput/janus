@@ -16,6 +16,10 @@
       "taskName": "build",
       "args": [],
       "isBuildCommand": true
+    },
+    {
+      "taskName": "haddock",
+      "args": []
     }
   ]
 }
