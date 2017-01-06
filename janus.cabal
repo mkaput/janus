@@ -15,12 +15,11 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Language.Janus,
-                       Language.Janus.AST,
+  exposed-modules:     Language.Janus.AST,
                        Language.Janus.Interp,
+                       Language.Janus.Parser,
                        Language.Janus.Stdlib
-  other-modules:       Language.Janus.Parser,
-                       Language.Janus.Parser.Expressions,
+  other-modules:       Language.Janus.Parser.Expressions,
                        Language.Janus.Parser.Lexer,
                        Language.Janus.Parser.Statements
   build-depends:       base >= 4.7 && < 5,
