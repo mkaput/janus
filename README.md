@@ -12,12 +12,8 @@ stack install
 ## Documentation
 
 We have some basic [Language Specification](doc/Language-Specification.md) in `doc/` directory,
-and most of functions are documented as Haddock comments, so you can obtain code documentation
-by running:
-
-```
-stack haddock
-```
+and most of functions are documented as Haddock comments. Generated documentation is hosted
+[here](https://mkaput.github.io/janus/), and you can of course also run `stack haddock`.
 
 ## Running tests
 
