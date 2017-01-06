@@ -109,6 +109,8 @@ newScopeFrame = do
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Intepreter state.
 data EvalState = EvalState {
                   nextMptr :: Ptr,
                   mem      :: MHashTable Ptr MemCell,
@@ -132,22 +134,24 @@ emptyState = do
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Interpreter error.
 data EvalError = OpCallTypeError {
                   opName    :: String,
                   triedSigs :: [[TypeRep]],
                   givenSig  :: [TypeRep]
-                }
-               | ItemCallError Item EvalError
-               | IndexOutOfBounds
-               | InternalError String
-               | InvalidPointer Ptr
-               | ExpectedBool Val
-               | ExpectedRef
-               | NotCallable Val
-               | OutOfMemory
-               | UndefinedSymbol String
+                }                             -- ^ Operator invocation type error
+               | ItemCallError Item EvalError -- ^ 'Callable' (e.g. function) call error
+               | IndexOutOfBounds             -- ^ Tried to access out of bounds index
+               | InternalError String         -- ^ Internal interpreter error - a bug
+               | InvalidPointer Ptr           -- ^ Tried to access unallocated memory cell
+               | ExpectedBool Val             -- ^ Expected boolean value (e.g. in condition)
+               | ExpectedRef                  -- ^ Expected reference (e.g. in call operator)
+               | NotCallable Val              -- ^ Given value is not callable
+               | OutOfMemory                  -- ^ Cannot allocate more memory cells
+               | UndefinedSymbol String       -- ^ Cannot resolve requested symbol
 
-               | CustomError String
+               | CustomError String           -- ^ In-code exception
 
                | LoopBreak_
                | LoopContinue_
@@ -198,11 +202,17 @@ instance Show EvalError where
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Interpreter monad.
 type InterpM = StateT EvalState (ExceptT EvalError IO)
 
+-- |
+-- Run action inside clean `InterpM'.
 runInterpM :: InterpM a -> IO (Either EvalError a)
 runInterpM m = do { st <- emptyState; runExceptT (evalStateT m st) }
 
+-- |
+-- Evaluate 'Evaluable' entity inside clean 'InterpM'.
 run :: Evaluable a => a -> IO (Either EvalError Val)
 run = runInterpM . eval
 
@@ -213,10 +223,14 @@ run = runInterpM . eval
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Dereference a 'Ref' - get 'Val' given reference points to.
 deref :: Ref -> InterpM Val
 deref (PtrRef ptr)       = memGetVal ptr
 deref (IndexRef ptr idx) = memGetVal ptr >>= (`valGetIdx` idx)
 
+-- |
+-- Alter value given 'Ref' points to.
 refset :: Ref -> Val -> InterpM ()
 refset (PtrRef ptr) newVal       = memset ptr newVal
 refset (IndexRef ptr idx) newVal = do
@@ -243,6 +257,8 @@ rawPopFrame = do
       put st { stack = fs }
       return top
 
+-- |
+-- Pop top stack frame.
 popFrame :: InterpM ()
 popFrame = do
   frame <- rawPopFrame
@@ -250,6 +266,8 @@ popFrame = do
     ScopeFrame{symbols=syms} -> liftIO (HM.toList syms) >>= mapM_ (rcDecr . snd)
     _ -> return ()
 
+-- |
+-- Push new scope.
 pushScope :: InterpM ()
 pushScope = newScopeFrame >>= rawPushFrame
 
@@ -283,15 +301,21 @@ cleanBlockFrame = rawPopFrame >>= doClean
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Check whether given pointer points to unallocated memory cell.
 memIsFree :: Ptr -> InterpM Bool
 memIsFree ptr = do { mem <- gets mem; isNothing <$> liftIO (HM.lookup mem ptr) }
 
+-- |
+-- Get value of given memory cell.
 memGetVal :: Ptr -> InterpM Val
 memGetVal ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   return $ val cell
 
+-- |
+-- Get reference count of given memory cell.
 memGetRc :: Ptr -> InterpM Word
 memGetRc ptr = do
   mem <- gets mem
@@ -299,6 +323,8 @@ memGetRc ptr = do
   return $ refcount cell
 
 -- malloc in Haskell XD
+-- |
+-- Allocate value in interpreter memory. Returns new memory cell's address.
 malloc :: Val -> InterpM Ptr
 malloc val = do
   mem <- gets mem
@@ -308,18 +334,25 @@ malloc val = do
   liftIO $ HM.insert mem ptr MemCell { refcount = 0, val = val }
   return ptr
 
+-- |
+-- Set value at given address.
 memset :: Ptr -> Val -> InterpM ()
 memset ptr val = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { val = val }
 
+-- |
+-- Increment reference count of memory cell at given address.
 rcIncr :: Ptr -> InterpM ()
 rcIncr ptr = do
   mem <- gets mem
   cell <- liftIO (HM.lookup mem ptr) `unwrapM'` InvalidPointer ptr
   liftIO $ HM.insert mem ptr cell { refcount = refcount cell + 1 }
 
+-- |
+-- Decrement reference count of memory cell at given address.
+-- If the RC will reach 0, the cell will be deallocated.
 rcDecr :: Ptr -> InterpM ()
 rcDecr ptr = do
   mem <- gets mem
@@ -335,6 +368,8 @@ rcDecr ptr = do
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Lookup variable in all available scopes.
 lookupVar :: String -> InterpM Ptr
 lookupVar name = gets stack >>= doLookup Nothing
   where
@@ -346,6 +381,10 @@ lookupVar name = gets stack >>= doLookup Nothing
       doLookup l frs
     doLookup _ (_:frs) = doLookup Nothing frs
 
+-- |
+-- Create new, or change existing, variable binding.
+-- If the variable has been already exising, its old value's
+-- reference count will be decremented.
 putVar :: String -> Ptr -> InterpM ()
 putVar name ptr = do
   syms <- gets $ symbols . head . filterScopes . stack
@@ -364,9 +403,15 @@ putVar name ptr = do
       ScopeFrame{..} -> True
       _              -> False
 
+-- |
+-- @
+--    evalVal name = lookupVar name >>= memGetVal
+-- @
 evalVal :: String -> InterpM Val
 evalVal name = lookupVar name >>= memGetVal
 
+-- |
+-- Enumerate all visible symbols.
 allVars :: InterpM [String]
 allVars = do
   stack <- gets stack
@@ -394,6 +439,8 @@ allVars = do
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- The Evaluable class denotes enitity which can be evaluated to 'Val'.
 class Evaluable a where
   eval :: a -> InterpM Val
 
@@ -642,7 +689,11 @@ instance Evaluable Stmt where
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- The RefEvaluable class denotes enitity which can be evaluated to 'Ref'
 class RefEvaluable a where
+  -- |
+  -- Throws 'ExpectedRef' if 'tryEvalRef' returns 'Nothing'.
   evalRef :: a -> InterpM Ref
   evalRef a = tryEvalRef a `unwrapM'` ExpectedRef
 
@@ -674,10 +725,12 @@ instance RefEvaluable Expr where
 
 -----------------------------------------------------------------------------
 --
--- Utility funcitons
+-- Callable
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- The Callable class denotes enitity which can be called, such as functions.
 class Callable a where
   call :: a -> [Val] -> InterpM Val
 
@@ -712,7 +765,9 @@ instance Callable Item where
 --
 -----------------------------------------------------------------------------
 
-valGetIdx :: Val -> Val -> InterpM Val
+valGetIdx :: Val         -- ^ Container value
+          -> Val         -- ^ Index
+          -> InterpM Val -- ^ Value inside container at given index
 valGetIdx (JStr s) (JInt n)
   | n < 0 = throwError IndexOutOfBounds
   | otherwise = (
@@ -724,7 +779,10 @@ valGetIdx v n = throwError OpCallTypeError {
     givenSig = [haskellTypeRep v, haskellTypeRep n]
   }
 
-valSetIdx :: Val -> Val -> Val -> InterpM Val
+valSetIdx :: Val         -- ^ Container value
+          -> Val         -- ^ Index
+          -> Val         -- ^ New Value
+          -> InterpM Val -- ^ New container with value at given index changed
 valSetIdx (JStr s) (JInt n) (JChar c)
   | n < 0 = throwError IndexOutOfBounds
   | otherwise = do

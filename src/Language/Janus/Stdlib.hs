@@ -26,6 +26,8 @@ import           Language.Janus.Interp
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- Import standard library items into current interpreter.
 importStdlib :: InterpM ()
 importStdlib = do
   putNativeFunc "abs" ["x"] jabs
@@ -60,14 +62,27 @@ jprintln vs = jprint vs <* liftIO (putStrLn "")
 --
 -----------------------------------------------------------------------------
 
+-- |
+-- @
+--    retVal = return . 'toVal'
+-- @
 retVal :: ToVal a => a -> InterpM Val
 retVal = return . toVal
 
+-- |
+-- Throw `CustomError` with given message.
 throwEx :: String -> InterpM a
 throwEx = throwError . CustomError
 
+-- |
+-- Allocate value and bind it to variable.
 putNativeVar :: ToVal a => String -> a -> InterpM ()
 putNativeVar name nv = malloc (toVal nv) >>= putVar name
 
-putNativeFunc :: String -> [String] -> ([Val] -> InterpM Val) -> InterpM ()
+-- |
+-- Declare native function.
+putNativeFunc :: String                 -- ^ Function name
+              -> [String]               -- ^ Function parameters names
+              -> ([Val] -> InterpM Val) -- ^ Function
+              -> InterpM ()
 putNativeFunc n p f = putNativeVar n $ NativeFunc n p f
