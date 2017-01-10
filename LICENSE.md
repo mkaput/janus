@@ -1,7 +1,7 @@
 The MIT License (MIT)
 =====================
 
-Copyright © 2016 Marek Kaput, Radomir Krawczykiewicz
+Copyright © 2016-2017 Marek Kaput, Radomir Krawczykiewicz
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
