@@ -4,9 +4,27 @@ Simple scripting language written in Haskell, "ambitious" project for Functional
 
 ## Installation
 
-```
+```shell
 stack build
 stack install
+```
+
+## Running Janus scripts
+
+```shell
+janus-run filename.js
+
+# or using stack
+stack exec janus-run -- examples/helloworld.js
+```
+
+## REPL
+
+```shell
+janus-repl
+
+# or using stack
+stack exec janus-repl
 ```
 
 ## Documentation
@@ -17,6 +35,6 @@ and most of functions are documented as Haddock comments. Generated documentatio
 
 ## Running tests
 
-```
+```shell
 stack test
 ```
