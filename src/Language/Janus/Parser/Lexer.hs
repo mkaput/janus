@@ -30,11 +30,11 @@ module Language.Janus.Parser.Lexer (
   boolean,
   literal
 ) where
-import                     Control.Applicative ((<|>))
-import                     Text.Parsec         (alphaNum, letter, oneOf, (<?>))
-import                     Control.Monad
-import qualified           Text.Parsec.Token   as T
-import                     Language.Janus.AST
+import           Control.Applicative ((<|>))
+import           Control.Monad
+import           Language.Janus.AST
+import           Text.Parsec         (alphaNum, letter, oneOf, (<?>))
+import qualified Text.Parsec.Token   as T
 
 janusDef :: T.LanguageDef st
 janusDef = T.LanguageDef {
@@ -47,15 +47,16 @@ janusDef = T.LanguageDef {
         T.opStart         = T.opLetter janusDef,
         T.opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~",
         T.reservedNames   = ["and", "as", "break", "case", "class",
-                           "const", "continue", "do", "else", "enum",
-                           "False", "fn", "for", "if", "in",
-                           "let", "loop", "mod", "or", "return",
-                           "trait", "True", "type", "while", "yield"],
+                             "const", "continue", "do", "else", "enum",
+                             "False", "fn", "for", "if", "in",
+                             "let", "loop", "mod", "or", "return",
+                             "trait", "True", "type", "while", "yield"],
         T.reservedOpNames = ["!", "~", "+", "-", "++", "--", "**", "*", "/", "<<", ">>",
-                           "<", "<=", ">", ">=", "==", "!=", "&", "^", "|", "(" , ")",
-                           "[", "]"],
+                             "<", "<=", ">", ">=", "==", "!=", "&", "^", "|", "(" , ")",
+                             "[", "]"],
         T.caseSensitive   = True
     }
+
 lexer = T.makeTokenParser janusDef
 
 identifier      = T.identifier      lexer
