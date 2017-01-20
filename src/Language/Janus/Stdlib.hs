@@ -60,13 +60,16 @@ jprintln :: [Val] -> InterpM Val
 jprintln vs = jprint vs <* liftIO (putStrLn "")
 
 jGetline :: [Val] -> InterpM Val
-jGetline [] = liftIO . getLine >>= toVal
+jGetline [] = liftIO getLine >>= retVal
 jGetline _  = throwEx "unexpected arguments"
 
 jToInt :: [Val] -> InterpM Val
-jToInt [v] = retVal . toInteger . fromVal $ v
-jToInt []  = throwEx "expected value to convert"
-jToInt _   = throwEx "too many arguments"
+jToInt [JInt v]    = retVal v
+jToInt [JDouble d] = retVal (floor d :: Integer)
+jToInt [JStr s]    = retVal (read s :: Integer)
+jToInt [JChar c]   = retVal (read [c] :: Integer)
+jToInt []          = throwEx "expected value to convert"
+jToInt _           = throwEx "too many arguments"
 
 
 -----------------------------------------------------------------------------
