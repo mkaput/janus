@@ -35,6 +35,10 @@ importStdlib = do
   putNativeFunc "print" ["v..."] jprint
   putNativeFunc "println" ["v..."] jprintln
 
+  putNativeFunc "getline" [] jGetline
+
+  putNativeFunc "int" ["x"] jToInt
+
 jabs :: [Val] -> InterpM Val
 jabs []          = throwEx "no arguments"
 jabs (_:_:_)     = throwEx "too many arguments"
@@ -54,6 +58,15 @@ jprint (v:vs) = do
 
 jprintln :: [Val] -> InterpM Val
 jprintln vs = jprint vs <* liftIO (putStrLn "")
+
+jGetline :: [Val] -> InterpM Val
+jGetline [] = liftIO . getLine >>= toVal
+jGetline _  = throwEx "unexpected arguments"
+
+jToInt :: [Val] -> InterpM Val
+jToInt [v] = retVal . toInteger . fromVal $ v
+jToInt []  = throwEx "expected value to convert"
+jToInt _   = throwEx "too many arguments"
 
 
 -----------------------------------------------------------------------------
