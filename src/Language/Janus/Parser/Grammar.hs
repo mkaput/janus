@@ -3,6 +3,7 @@ module Language.Janus.Parser.Grammar (
   expression
 ) where
 
+
 import           Language.Janus.AST
 import           Language.Janus.Parser.Lexer
 import           Text.Parsec
@@ -22,16 +23,40 @@ statement = letDecl
           <?> "statement"
 
 letDecl :: Parser Stmt
-letDecl = undefined
+letDecl = do
+  keyword "let"
+  ident <- identifier
+  string "="
+  expr <- expression
+  return (LetDecl ident expr)
 
 fnDecl :: Parser Stmt
 fnDecl = undefined
 
 substStmt :: Parser Stmt
-substStmt = undefined
+substStmt = do
+  lval <- lvalue
+  colon
+  try (string ":=")
+  expr <- expression
+  return (SubstStmt lval expr)
+
+lvalue = path
+        <|> lndexLv
+
+path = do
+  p <- identifier
+  return (Path p)
+
+lndexLv = do
+  p <- identifier
+  e <- expression
+  return (IndexLv p e)
 
 exprStmt :: Parser Stmt
-exprStmt = undefined
+exprStmt = do
+  e <- expression
+  return (ExprStmt e)
 
 -----------------------------------------------------------------------------
 --

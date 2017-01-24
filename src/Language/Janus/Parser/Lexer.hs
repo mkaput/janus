@@ -53,7 +53,7 @@ janusDef = T.LanguageDef {
                              "trait", "True", "type", "while", "yield"],
         T.reservedOpNames = ["!", "~", "+", "-", "++", "--", "**", "*", "/", "<<", ">>",
                              "<", "<=", ">", ">=", "==", "!=", "&", "^", "|", "(" , ")",
-                             "[", "]"],
+                             "[", "]", "()"],
         T.caseSensitive   = True
     }
 
@@ -96,5 +96,5 @@ literal = either JInt JDouble <$> naturalOrFloat
           <|> JChar <$> charLiteral
           <|> JStr <$> stringLiteral
           <|> JBool <$> boolean
-          <|> reservedOp "(" *> reservedOp ")" *> return JUnit
+          <|> reservedOp "()" *> return JUnit
           <?> "literal"
