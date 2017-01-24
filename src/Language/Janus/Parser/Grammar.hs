@@ -72,156 +72,135 @@ exprStmt = do
 --
 -----------------------------------------------------------------------------
 expression :: Parser Expr
-expression = literalExpr
-          <|> blockExpr
-          <|> parenExpr
-          <|> callExpr
-          <|> postfixIncExpr
-          <|> postfixDecExpr
-          <|> notExpr
-          <|> bitNotExpr
-          <|> plusExpr
-          <|> negExpr
-          <|> prefixIncExpr
-          <|> prefixDecExpr
-          <|> expExpr
-          <|> mulExpr
-          <|> divExpr
-          <|> remExpr
-          <|> addExpr
-          <|> subExpr
-          <|> lshExpr
-          <|> rshExpr
-          <|> bitAndExpr
-          <|> bitXorExpr
-          <|> bitOrExpr
-          <|> eqExpr
-          <|> neqExpr
-          <|> ltExpr
-          <|> gtExpr
-          <|> ltEqExpr
-          <|> gtEqExpr
-          <|> andExpr
-          <|> orExpr
-          <|> ifExpr
-          <|> whileExpr
-          <|> loopExpr
-          <|> breakExpr
-          <|> continueExpr
-          <|> returnExpr
-          <|> lvalueExpr
-          <?> "expression"
+expression = buildExpressionParser table term <?> "expression"
+
+table = [ [Prefix (reservedOp "!" >> return (NotExpr))]
+        , [Prefix (reservedOp "~" >> return (BitNotExpr))]
+        , [Infix (reservedOp "**" >> return (ExpExpr)) AssocRight]
+        , [Infix (reservedOp "*" >> return (MulExpr)) AssocLeft]
+        , [Infix (reservedOp "/" >> return (DivExpr)) AssocLeft]
+        , [Infix (keyword "mod" >> return (RemExpr)) AssocLeft]
+        , [Infix (reservedOp "+" >> return (AddExpr)) AssocLeft]
+        , [Infix (reservedOp "-" >> return (SubExpr)) AssocLeft]
+        , [Infix (reservedOp "<<" >> return (LshExpr)) AssocLeft]
+        , [Infix (reservedOp ">>" >> return (RshExpr)) AssocLeft]
+        , [Infix (reservedOp "&" >> return (BitAndExpr)) AssocLeft]
+        , [Infix (reservedOp "^" >> return (BitXorExpr)) AssocLeft]
+        , [Infix (reservedOp "|" >> return (BitOrExpr)) AssocLeft]
+        , [Infix (reservedOp "==" >> return (EqExpr)) AssocLeft]
+        , [Infix (reservedOp "!=" >> return (NeqExpr)) AssocLeft]
+        , [Infix (reservedOp "<" >> return (LtExpr)) AssocLeft]
+        , [Infix (reservedOp ">" >> return (GtExpr)) AssocLeft]
+        , [Infix (reservedOp "<=" >> return (LtEqExpr)) AssocLeft]
+        , [Infix (reservedOp ">=" >> return (GtEqExpr)) AssocLeft]
+        , [Infix (reservedOp "and" >> return (AndExpr)) AssocLeft]
+        , [Infix (reservedOp "or" >> return (OrExpr)) AssocLeft]
+        ]
+term = literalExpr
+      <|> blockExpr
+      <|> parenExpr
+      <|> callExpr
+      <|> postfixIncExpr
+      <|> postfixDecExpr
+      <|> prefixIncExpr
+      <|> prefixDecExpr
+      <|> plusExpr
+      <|> negExpr
+      <|> ifExpr
+      <|> whileExpr
+      <|> loopExpr
+      <|> breakExpr
+      <|> continueExpr
+      <|> returnExpr
+      <|> lvalueExpr
 
 literalExpr :: Parser Expr
-literalExpr = undefined
+literalExpr = literal >>= return . LiteralExpr
 
 blockExpr :: Parser Expr
-blockExpr = undefined
+blockExpr = block >>= return . BlockExpr
 
 parenExpr :: Parser Expr
-parenExpr = undefined
+parenExpr = parens expression >>= return . ParenExpr
 
 callExpr :: Parser Expr
-callExpr = undefined
+callExpr = do
+  f <- expression
+  s <- parens(commaSep expression)
+  return (CallExpr f s)
 
 postfixIncExpr :: Parser Expr
-postfixIncExpr = undefined
+postfixIncExpr = do
+  l <- lvalue
+  reservedOp "++"
+  return (PostfixIncExpr l)
 
 postfixDecExpr :: Parser Expr
-postfixDecExpr = undefined
-
-notExpr :: Parser Expr
-notExpr = undefined
-
-bitNotExpr :: Parser Expr
-bitNotExpr = undefined
-
-plusExpr :: Parser Expr
-plusExpr = undefined
-
-negExpr :: Parser Expr
-negExpr = undefined
+postfixDecExpr = do
+  l <- lvalue
+  reservedOp "--"
+  return (PostfixDecExpr l)
 
 prefixIncExpr :: Parser Expr
-prefixIncExpr = undefined
+prefixIncExpr = do
+  reservedOp "++"
+  l <- lvalue
+  return (PrefixIncExpr l)
 
 prefixDecExpr :: Parser Expr
-prefixDecExpr = undefined
+prefixDecExpr = do
+  reservedOp "--"
+  l <- lvalue
+  return (PrefixDecExpr l)
 
-expExpr :: Parser Expr
-expExpr = undefined
+plusExpr :: Parser Expr
+plusExpr = do
+  reservedOp "+"
+  e <- expression
+  return (PlusExpr e)
 
-mulExpr :: Parser Expr
-mulExpr = undefined
-
-divExpr :: Parser Expr
-divExpr = undefined
-
-remExpr :: Parser Expr
-remExpr = undefined
-
-addExpr :: Parser Expr
-addExpr = undefined
-
-subExpr :: Parser Expr
-subExpr = undefined
-
-lshExpr :: Parser Expr
-lshExpr = undefined
-
-rshExpr :: Parser Expr
-rshExpr = undefined
-
-bitAndExpr :: Parser Expr
-bitAndExpr = undefined
-
-bitXorExpr :: Parser Expr
-bitXorExpr = undefined
-
-bitOrExpr :: Parser Expr
-bitOrExpr = undefined
-
-eqExpr :: Parser Expr
-eqExpr = undefined
-
-neqExpr :: Parser Expr
-neqExpr = undefined
-
-ltExpr :: Parser Expr
-ltExpr = undefined
-
-gtExpr :: Parser Expr
-gtExpr = undefined
-
-ltEqExpr :: Parser Expr
-ltEqExpr = undefined
-
-gtEqExpr :: Parser Expr
-gtEqExpr = undefined
-
-andExpr :: Parser Expr
-andExpr = undefined
-
-orExpr :: Parser Expr
-orExpr = undefined
+negExpr :: Parser Expr
+negExpr = do
+  reservedOp "-"
+  e <- expression
+  return (NegExpr e)
 
 ifExpr :: Parser Expr
-ifExpr = undefined
+ifExpr = do
+  keyword "if"
+  cond <- expression
+  ifBranch <- blockExpr
+  elseBranch <- else'
+  return (IfExpr cond ifBranch elseBranch)
+
+else' = (keyword "else" >> ifExpr >>= return . Just)
+  <|> (keyword "else" >> blockExpr >>= return . Just)
+  <|> (return Nothing)
 
 whileExpr :: Parser Expr
-whileExpr = undefined
+whileExpr = do
+  keyword "while"
+  cond <- expression
+  body <- blockExpr
+  return (WhileExpr cond body)
 
 loopExpr :: Parser Expr
-loopExpr = undefined
+loopExpr = do
+  keyword "loop"
+  body <- blockExpr
+  return (LoopExpr body)
 
 breakExpr :: Parser Expr
-breakExpr = undefined
+breakExpr = keyword "return" >> return BreakExpr
 
 continueExpr :: Parser Expr
-continueExpr = undefined
+continueExpr = keyword "continue" >> return ContinueExpr
 
 returnExpr :: Parser Expr
-returnExpr = undefined
+returnExpr = do
+  keyword "return"
+  e <- expression
+  return (ReturnExpr e)
 
 lvalueExpr :: Parser Expr
-lvalueExpr = undefined
+lvalueExpr = lvalue >>= return . LvalueExpr
