@@ -5,6 +5,9 @@ module Language.Janus.Parser.Grammar (
 
 import           Language.Janus.AST
 import           Language.Janus.Parser.Lexer
+import           Text.Parsec
+import           Text.Parsec.String
+import           Text.Parsec.Expr
 
 -----------------------------------------------------------------------------
 --
@@ -36,7 +39,7 @@ exprStmt = undefined
 --
 -----------------------------------------------------------------------------
 expression :: Parser Expr
-expression =  literalExpr
+expression = literalExpr
           <|> blockExpr
           <|> parenExpr
           <|> callExpr
@@ -76,116 +79,116 @@ expression =  literalExpr
           <|> lvalueExpr
           <?> "expression"
 
-literalExpr :: Parser Stmt
+literalExpr :: Parser Expr
 literalExpr = undefined
 
-blockExpr :: Parser Stmt
+blockExpr :: Parser Expr
 blockExpr = undefined
 
-parenExpr :: Parser Stmt
+parenExpr :: Parser Expr
 parenExpr = undefined
 
-callExpr :: Parser Stmt
+callExpr :: Parser Expr
 callExpr = undefined
 
-postfixIncExpr :: Parser Stmt
+postfixIncExpr :: Parser Expr
 postfixIncExpr = undefined
 
-postfixDecExpr :: Parser Stmt
+postfixDecExpr :: Parser Expr
 postfixDecExpr = undefined
 
-notExpr :: Parser Stmt
+notExpr :: Parser Expr
 notExpr = undefined
 
-bitNotExpr :: Parser Stmt
+bitNotExpr :: Parser Expr
 bitNotExpr = undefined
 
-plusExpr :: Parser Stmt
+plusExpr :: Parser Expr
 plusExpr = undefined
 
-negExpr :: Parser Stmt
+negExpr :: Parser Expr
 negExpr = undefined
 
-prefixIncExpr :: Parser Stmt
+prefixIncExpr :: Parser Expr
 prefixIncExpr = undefined
 
-prefixDecExpr :: Parser Stmt
+prefixDecExpr :: Parser Expr
 prefixDecExpr = undefined
 
-expExpr :: Parser Stmt
+expExpr :: Parser Expr
 expExpr = undefined
 
-mulExpr :: Parser Stmt
+mulExpr :: Parser Expr
 mulExpr = undefined
 
-divExpr :: Parser Stmt
+divExpr :: Parser Expr
 divExpr = undefined
 
-remExpr :: Parser Stmt
+remExpr :: Parser Expr
 remExpr = undefined
 
-addExpr :: Parser Stmt
+addExpr :: Parser Expr
 addExpr = undefined
 
-subExpr :: Parser Stmt
+subExpr :: Parser Expr
 subExpr = undefined
 
-lshExpr :: Parser Stmt
+lshExpr :: Parser Expr
 lshExpr = undefined
 
-rshExpr :: Parser Stmt
+rshExpr :: Parser Expr
 rshExpr = undefined
 
-bitAndExpr :: Parser Stmt
+bitAndExpr :: Parser Expr
 bitAndExpr = undefined
 
-bitXorExpr :: Parser Stmt
+bitXorExpr :: Parser Expr
 bitXorExpr = undefined
 
-bitOrExpr :: Parser Stmt
+bitOrExpr :: Parser Expr
 bitOrExpr = undefined
 
-eqExpr :: Parser Stmt
+eqExpr :: Parser Expr
 eqExpr = undefined
 
-neqExpr :: Parser Stmt
+neqExpr :: Parser Expr
 neqExpr = undefined
 
-ltExpr :: Parser Stmt
+ltExpr :: Parser Expr
 ltExpr = undefined
 
-gtExpr :: Parser Stmt
+gtExpr :: Parser Expr
 gtExpr = undefined
 
-ltEqExpr :: Parser Stmt
+ltEqExpr :: Parser Expr
 ltEqExpr = undefined
 
-gtEqExpr :: Parser Stmt
+gtEqExpr :: Parser Expr
 gtEqExpr = undefined
 
-andExpr :: Parser Stmt
+andExpr :: Parser Expr
 andExpr = undefined
 
-orExpr :: Parser Stmt
+orExpr :: Parser Expr
 orExpr = undefined
 
-ifExpr :: Parser Stmt
+ifExpr :: Parser Expr
 ifExpr = undefined
 
-whileExpr :: Parser Stmt
+whileExpr :: Parser Expr
 whileExpr = undefined
 
-loopExpr :: Parser Stmt
+loopExpr :: Parser Expr
 loopExpr = undefined
 
-breakExpr :: Parser Stmt
+breakExpr :: Parser Expr
 breakExpr = undefined
 
-continueExpr :: Parser Stmt
+continueExpr :: Parser Expr
 continueExpr = undefined
 
-returnExpr :: Parser Stmt
+returnExpr :: Parser Expr
 returnExpr = undefined
 
-lvalueExpr :: Parser Stmt
+lvalueExpr :: Parser Expr
 lvalueExpr = undefined
