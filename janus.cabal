@@ -19,9 +19,8 @@ library
                        Language.Janus.Interp,
                        Language.Janus.Parser,
                        Language.Janus.Stdlib
-  other-modules:       Language.Janus.Parser.Expressions,
-                       Language.Janus.Parser.Lexer,
-                       Language.Janus.Parser.Statements
+  other-modules:       Language.Janus.Parser.Grammar,
+                       Language.Janus.Parser.Lexer
   build-depends:       base >= 4.7 && < 5,
                        containers == 0.5.*,
                        hashable,
