@@ -26,7 +26,7 @@ letDecl :: Parser Stmt
 letDecl = do
   keyword "let"
   ident <- identifier
-  string "="
+  reservedOp "="
   expr <- expression
   semi
   return (LetDecl ident expr)
@@ -47,7 +47,7 @@ block = do
 substStmt :: Parser Stmt
 substStmt = do
   lval <- lvalue
-  try (string ":=")
+  reservedOp ":="
   expr <- expression
   semi
   return (SubstStmt lval expr)
