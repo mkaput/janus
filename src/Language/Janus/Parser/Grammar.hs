@@ -40,9 +40,7 @@ fnDecl = do
   optional semi
   return (FnDecl ident params b)
 
-block = do
-  b <- braces (many statement)
-  return (Block b)
+block = braces (many statement) >>= return . Block
 
 substStmt :: Parser Stmt
 substStmt = do
@@ -52,12 +50,10 @@ substStmt = do
   semi
   return (SubstStmt lval expr)
 
-lvalue = path
-        <|> lndexLv
+lvalue = lndexLv
+        <|> path
 
-path = do
-  p <- identifier
-  return (Path p)
+path = identifier >>= return . Path
 
 lndexLv = do
   p <- identifier
