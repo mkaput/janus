@@ -28,17 +28,28 @@ letDecl = do
   ident <- identifier
   string "="
   expr <- expression
+  semi
   return (LetDecl ident expr)
 
 fnDecl :: Parser Stmt
-fnDecl = undefined
+fnDecl = do
+  keyword "fn"
+  ident <- identifier
+  params <- parens(commaSep identifier)
+  b <- block
+  optional semi
+  return (FnDecl ident params b)
+
+block = do
+  b <- braces (many statement)
+  return (Block b)
 
 substStmt :: Parser Stmt
 substStmt = do
   lval <- lvalue
-  colon
   try (string ":=")
   expr <- expression
+  semi
   return (SubstStmt lval expr)
 
 lvalue = path
@@ -56,6 +67,7 @@ lndexLv = do
 exprStmt :: Parser Stmt
 exprStmt = do
   e <- expression
+  semi
   return (ExprStmt e)
 
 -----------------------------------------------------------------------------
