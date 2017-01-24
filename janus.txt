@@ -8,8 +8,6 @@
 @package janus
 @version 0.1.0.0
 
-module Language.Janus.Parser
-
 module Language.Janus.AST
 newtype Program
 Program :: [Stmt] -> Program
@@ -278,6 +276,20 @@ instance Language.Janus.Interp.RefEvaluable Language.Janus.AST.Lvalue
 instance Language.Janus.Interp.RefEvaluable Language.Janus.AST.Expr
 instance Language.Janus.Interp.Callable Language.Janus.AST.Val
 instance Language.Janus.Interp.Callable Language.Janus.AST.Item
+
+module Language.Janus.Parser
+
+-- | Parse whole Janus program source code.
+parseProgram :: String -> String -> Either ParseError Program
+
+-- | Parse single statement
+parseStatement :: String -> Either ParseError Stmt
+
+-- | Parse single expression
+parseExpression :: String -> Either ParseError Expr
+
+-- | Parse single literal
+parseLiteral :: String -> Either ParseError Val
 
 module Language.Janus.Stdlib
 
