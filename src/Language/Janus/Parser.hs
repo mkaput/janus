@@ -11,9 +11,8 @@ import           Control.Applicative               (many, (*>), (<$), (<$>),
 import           Text.Parsec                       (ParseError, eof, parse)
 
 import           Language.Janus.AST
-import           Language.Janus.Parser.Expressions
+import           Language.Janus.Parser.Grammar
 import           Language.Janus.Parser.Lexer
-import           Language.Janus.Parser.Statements
 
 -- |
 -- Parse whole Janus program source code.
