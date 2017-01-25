@@ -8,6 +8,7 @@ import qualified Options.Applicative   as O
 import           Language.Janus.AST
 import           Language.Janus.Interp
 import           Language.Janus.Parser
+import           Language.Janus.Stdlib
 
 data Arguments = Arguments String
                deriving (Show)
@@ -25,4 +26,5 @@ runApp (Arguments filename) = do
   source <- readFile filename
   case parseProgram filename source of
     Left err  -> print err
-    Right ast -> run ast >>= either print (\_ -> return ())
+    Right ast -> run' ast >>= either print (\_ -> return ())
+  where run' ast = runInterpM $ do { importStdlib; eval ast }
