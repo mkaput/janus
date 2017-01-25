@@ -43,12 +43,12 @@ fnDecl = do
 block = braces (many statement) >>= return . Block
 
 substStmt :: Parser Stmt
-substStmt = do
+substStmt = try(do
   lval <- lvalue
   reservedOp ":="
   expr <- expression
   semi
-  return (SubstStmt lval expr)
+  return (SubstStmt lval expr))
 
 lvalue = try(lndexLv <|> path)
 --lvalue = try( lndexLv <|> path )
@@ -129,46 +129,46 @@ parenExpr :: Parser Expr
 parenExpr = parens expression >>= return . ParenExpr
 
 callExpr :: Parser Expr
-callExpr = do
+callExpr = try(do
   f <- lvalueExpr
   s <- parens(commaSep expression)
-  return (CallExpr f s)
+  return (CallExpr f s))
 
 postfixIncExpr :: Parser Expr
-postfixIncExpr = do
+postfixIncExpr = try(do
   l <- lvalue
   reservedOp "++"
-  return (PostfixIncExpr l)
+  return (PostfixIncExpr l))
 
 postfixDecExpr :: Parser Expr
-postfixDecExpr = do
+postfixDecExpr = try(do
   l <- lvalue
   reservedOp "--"
-  return (PostfixDecExpr l)
+  return (PostfixDecExpr l))
 
 prefixIncExpr :: Parser Expr
-prefixIncExpr = do
+prefixIncExpr = try(do
   reservedOp "++"
   l <- lvalue
-  return (PrefixIncExpr l)
+  return (PrefixIncExpr l))
 
 prefixDecExpr :: Parser Expr
-prefixDecExpr = do
+prefixDecExpr = try(do
   reservedOp "--"
   l <- lvalue
-  return (PrefixDecExpr l)
+  return (PrefixDecExpr l))
 
 plusExpr :: Parser Expr
-plusExpr = do
+plusExpr = try(do
   reservedOp "+"
   e <- expression
-  return (PlusExpr e)
+  return (PlusExpr e))
 
 negExpr :: Parser Expr
-negExpr = do
+negExpr = try(do
   reservedOp "-"
   e <- expression
-  return (NegExpr e)
+  return (NegExpr e))
 
 ifExpr :: Parser Expr
 ifExpr = do
