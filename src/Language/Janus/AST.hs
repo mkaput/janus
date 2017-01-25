@@ -103,8 +103,8 @@ showVal JUnit       = "()"
 showVal (JBool x)   = show x
 showVal (JInt x)    = show x
 showVal (JDouble x) = show x
-showVal (JChar x)   = show x
-showVal (JStr x)    = show x
+showVal (JChar x)   = [x]
+showVal (JStr x)    = x
 showVal (JItem x)   = show x
 
 haskellTypeRep :: Val -> TypeRep

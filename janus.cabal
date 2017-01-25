@@ -53,6 +53,7 @@ test-suite janus-spec
   main-is:             Spec.hs
   other-modules:       Language.Janus.ASTSpec,
                        Language.Janus.InterpreterSpec,
+                       Language.Janus.ParserSpec,
                        Language.Janus.StdlibSpec,
                        Language.Janus.TestUtil
   build-depends:       base,

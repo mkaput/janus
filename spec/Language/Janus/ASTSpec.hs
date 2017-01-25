@@ -1,9 +1,9 @@
 module Language.Janus.ASTSpec where
 
-import Test.Hspec
-import Test.QuickCheck
+import           Test.Hspec
+import           Test.QuickCheck
 
-import Language.Janus.AST
+import           Language.Janus.AST
 
 main = hspec spec
 
@@ -71,8 +71,8 @@ spec = do
     it "shows inner value just like 'show' on booleans" . property $
       \x -> show x == showVal (JBool x)
 
-    it "shows inner value just like 'show' on chars" . property $
-      \x -> show x == showVal (JChar x)
+    it "shows inner value as string on chars" . property $
+      \x -> [x] == showVal (JChar x)
 
-    it "shows inner value just like 'show' on strings" . property $
-      \x -> show x == showVal (JStr x)
+    it "shows the string on strings" . property $
+      \x -> x == showVal (JStr x)
