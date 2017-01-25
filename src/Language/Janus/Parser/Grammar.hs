@@ -50,20 +50,21 @@ substStmt = do
   semi
   return (SubstStmt lval expr)
 
-lvalue = lndexLv
-        <|> path
+lvalue = try(lndexLv <|> path)
+--lvalue = try( lndexLv <|> path )
 
 path = identifier >>= return . Path
 
-lndexLv = do
+lndexLv = try(do
   p <- identifier
-  e <- expression
-  return (IndexLv p e)
+  e <- brackets (expression)
+  return (IndexLv p e))
+
 
 exprStmt :: Parser Stmt
 exprStmt = do
   e <- expression
-  semi
+  optional semi
   return (ExprStmt e)
 
 -----------------------------------------------------------------------------
@@ -73,6 +74,7 @@ exprStmt = do
 -----------------------------------------------------------------------------
 expression :: Parser Expr
 expression = buildExpressionParser table term <?> "expression"
+
 
 table = [ [Prefix (reservedOp "!" >> return (NotExpr))]
         , [Prefix (reservedOp "~" >> return (BitNotExpr))]
@@ -96,6 +98,8 @@ table = [ [Prefix (reservedOp "!" >> return (NotExpr))]
         , [Infix (reservedOp "and" >> return (AndExpr)) AssocLeft]
         , [Infix (reservedOp "or" >> return (OrExpr)) AssocLeft]
         ]
+
+
 term = literalExpr
       <|> blockExpr
       <|> parenExpr
@@ -114,6 +118,7 @@ term = literalExpr
       <|> returnExpr
       <|> lvalueExpr
 
+
 literalExpr :: Parser Expr
 literalExpr = literal >>= return . LiteralExpr
 
@@ -125,7 +130,7 @@ parenExpr = parens expression >>= return . ParenExpr
 
 callExpr :: Parser Expr
 callExpr = do
-  f <- expression
+  f <- lvalueExpr
   s <- parens(commaSep expression)
   return (CallExpr f s)
 
