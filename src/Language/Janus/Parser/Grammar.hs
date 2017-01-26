@@ -178,9 +178,9 @@ ifExpr = do
   elseBranch <- else'
   return (IfExpr cond ifBranch elseBranch)
 
-else' = (keyword "else" >> ifExpr >>= return . Just)
-  <|> (keyword "else" >> blockExpr >>= return . Just)
-  <|> (return Nothing)
+else' = (keyword "else" >>(try(ifExpr >>= return . Just)
+          <|> try(blockExpr >>= return . Just)))
+        <|> (return Nothing)
 
 whileExpr :: Parser Expr
 whileExpr = do
@@ -190,22 +190,16 @@ whileExpr = do
   return (WhileExpr cond body)
 
 loopExpr :: Parser Expr
-loopExpr = do
-  keyword "loop"
-  body <- blockExpr
-  return (LoopExpr body)
+loopExpr = keyword "loop" >> blockExpr >>= return . LoopExpr
 
 breakExpr :: Parser Expr
-breakExpr = keyword "return" >> return BreakExpr
+breakExpr = keyword "break" >> return BreakExpr
 
 continueExpr :: Parser Expr
 continueExpr = keyword "continue" >> return ContinueExpr
 
 returnExpr :: Parser Expr
-returnExpr = do
-  keyword "return"
-  e <- expression
-  return (ReturnExpr e)
+returnExpr = keyword "return" >> (try(expression >>= return . ReturnExpr) <|> return (ReturnExpr $ LiteralExpr JUnit))
 
 lvalueExpr :: Parser Expr
 lvalueExpr = lvalue >>= return . LvalueExpr
