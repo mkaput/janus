@@ -29,8 +29,9 @@ stack exec janus-repl
 
 ## Documentation
 
-We have some basic [Language Specification](doc/Language-Specification.md) in `doc/` directory,
-and most of functions are documented as Haddock comments. Generated documentation is hosted
+We have some basic [Language Specification](doc/Language-Specification.md) and
+[Presentation slides (in Polish)](doc/slides_pl.pdf) in `doc/` directory, and most of
+functions are documented as Haddock comments. Generated documentation is hosted
 [here](https://mkaput.github.io/janus/), and you can of course also run `stack haddock`.
 
 ## Running tests
