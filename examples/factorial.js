@@ -1,4 +1,5 @@
 print("N: ");
+flush();
 let n = int(getline());
 
 fn fact(x) {
@@ -21,4 +22,4 @@ fn fact2(x) {
 }
 
 println("N! rec:", fact(n));
-println("N! iter:", fact2(n));
+println("N! itr:", fact2(n));

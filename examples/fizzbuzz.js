@@ -1,4 +1,4 @@
-let i = 0;
+let i = 1;
 while i <= 100 {
   if i mod 3 == 0 and i mod 5 == 0 {
     println("Janusze Haskella");

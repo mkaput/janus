@@ -15,6 +15,7 @@ import           Control.Monad.Except
 import           Control.Monad.IO.Class
 
 import           Data.Typeable          (TypeRep, Typeable, typeOf)
+import           System.IO
 
 import           Language.Janus.AST
 import           Language.Janus.Interp
@@ -36,6 +37,7 @@ importStdlib = do
   putNativeFunc "println" ["v..."] jprintln
 
   putNativeFunc "getline" [] jGetline
+  putNativeFunc "flush" [] jFlush
 
   putNativeFunc "int" ["x"] jToInt
 
@@ -62,6 +64,10 @@ jprintln vs = jprint vs <* liftIO (putStrLn "")
 jGetline :: [Val] -> InterpM Val
 jGetline [] = liftIO getLine >>= retVal
 jGetline _  = throwEx "unexpected arguments"
+
+jFlush :: [Val] -> InterpM Val
+jFlush [] = liftIO (hFlush stdout) >>= retVal
+jFlush _  = throwEx "unexpected arguments"
 
 jToInt :: [Val] -> InterpM Val
 jToInt [JInt v]    = retVal v
